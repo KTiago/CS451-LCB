@@ -1,4 +1,3 @@
-import java.util.AbstractMap;
 import java.util.HashMap;
 
 //USERNAME:da-user
@@ -11,8 +10,6 @@ public class da_proc {
     private boolean isWaiting = true;
     private HashMap<Integer, Pair<String,Integer>> membership;
 
-    //Enumerations
-
 
     //Constructor of da_proc
     public da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership) {
@@ -24,7 +21,7 @@ public class da_proc {
 
     //Private Methods
 
-    //Method invoked when the signal SIGUSR1 is received
+    //Method invoked when the signal SIGUSR2 is received
     public void start(){
         //TODO
     }
@@ -35,10 +32,7 @@ public class da_proc {
         System.exit(0);
     }
 
-    //Method to parse the membership file
-    public static void parseMembership() {
-        //TODO
-    }
+
 
     //Handling TERM, INT and USR2 signals
     public void signalHandling(){
