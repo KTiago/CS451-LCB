@@ -1,5 +1,6 @@
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import org.apache.lang.ArrayUtils;
 
 public class PacketWrapper {
 
@@ -15,18 +16,22 @@ public class PacketWrapper {
         this.port = packet.getPort();
     }
 
+    //Return true if the packet is an ACK
     public Boolean isACK() {
         return isACK;
     }
 
+    //Return the sequence number
     public int getSequenceNumber() {
         return sequenceNumber;
     }
 
+    //Return the IP Address
     public InetAddress getIP() {
         return IP;
     }
 
+    //Return the Port number
     public int getPort() {
         return port;
     }
@@ -46,12 +51,14 @@ public class PacketWrapper {
 
     }
 
-    public String getData(){
-        return "Content";
+    //Return a
+    private String toString(byte[] bytes,int length ,int offset){
+        //ISO-8859-1 is the default charset encoding
+        return new String(ArrayUtils.subarray(bytes, offset, offset+length), "ISO-8859-1");
     }
 
     //Return the integer corresponding to 4 bytes in an array at a given offset
-    private static int toInt(byte[] bytes, int offset) {
+    private int toInt(byte[] bytes, int offset) {
         int ret = 0;
         for (int i=0; i<4 && i+offset<bytes.length; i++) {
             ret <<= 8;
@@ -62,7 +69,6 @@ public class PacketWrapper {
 
     //Create a DatagramPacket corresponding to an ACK
     public static DatagramPacket createACK(InetAddress IP,int port){
-
         //TODO
     }
 
