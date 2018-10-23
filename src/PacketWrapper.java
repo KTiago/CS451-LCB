@@ -61,13 +61,14 @@ public class PacketWrapper {
     }
 
     //Create a DatagramPacket corresponding to an ACK
-    public static DatagramPacket createACK(InetAddress IP,int port){
-
+    public static DatagramPacket createACK(int sequenceNumber, InetAddress destinationIP,int destinationPort){
+        return null;
         //TODO
     }
 
     //Create a DatagramPacket corresponding to a Simple Message
-    public static DatagramPacket createSimpleMessage(){
+    public static DatagramPacket createSimpleMessage(String message, int sequenceNumber, InetAddress destinationIP, int destinationPort){
+        return null;
         //TODO
     }
 }
