@@ -26,7 +26,7 @@ public class DebugSignalHandler implements SignalHandler {
                 proc.start();
                 break;
                 default:
-                    System.out.println("Default Signal");
+                    System.out.println("Other Signal received");
                     break;
         }
     }
