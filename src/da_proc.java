@@ -10,7 +10,6 @@ public class da_proc {
     private boolean isWaiting = true;
     private HashMap<Integer, Pair<String,Integer>> membership;
 
-
     //Constructor of da_proc
     public da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership) {
         this.id = id;
