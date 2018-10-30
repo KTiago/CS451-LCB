@@ -20,6 +20,7 @@ public class PacketWrapper {
         this.packet = packet;
         this.IP = packet.getAddress();
         this.port = packet.getPort();
+        this.readPacketContent();
     }
 
     //Return true if the packet is an ACK

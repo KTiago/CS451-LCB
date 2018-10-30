@@ -4,13 +4,9 @@
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.Collections;
-import java.util.List;
 
 public class PerfectLink {
 
@@ -53,9 +49,10 @@ public class PerfectLink {
         this.localAcks = new int[peers.size()];
         this.remoteAcks = new int[peers.size()];
         this.sequenceNumbers = new int[peers.size()];
+        Arrays.fill(sequenceNumbers, -1);
 
-        this.messagesToSend = new ArrayList<>();
-        this.messagesToDeliver = new ArrayList<>();
+        this.messagesToSend = new ArrayList<>(Collections.nCopies(peers.size(), new ArrayList<>()));
+        this.messagesToDeliver = new ArrayList<>(Collections.nCopies(peers.size(), new ArrayList<>()));
 
         t1 = new Thread() {
             public void run() {
@@ -93,10 +90,11 @@ public class PerfectLink {
     }
 
     private void deliver(String message, int id) {
-        System.out.println("Delivered : "+message+" from "+id);
+        System.out.println("Delivered : "+message);
     }
 
     public void send(String message, int destinationID) {
+        System.out.println("Sending to "+destinationID+" - "+message);
         synchronized (messagesToSend) {
             messagesToSend.get(destinationID).add(message);
         }
@@ -105,23 +103,21 @@ public class PerfectLink {
         int sequenceNumber = ++sequenceNumbers[destinationID];
         DatagramPacket packet = PacketWrapper.createSimpleMessage(message, sequenceNumber, destinationIP, destinationPort);
         sendQueue.add(packet);
-       new Thread(){
+
+        Thread t = new Thread(){
             public void run() {
                 try {
-                    timer(packet, sequenceNumber, destinationID, 1);
+                    while(remoteAcks[destinationID] <= sequenceNumber){
+                        Thread.sleep(1000);
+                        sendQueue.add(packet);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                     System.exit(-1);
                 }
             }
-        }.run();
-    }
-
-    private void timer(DatagramPacket packet, int sequenceNumber, int id, long time) throws Exception{
-        while(remoteAcks[id] < sequenceNumber){
-            Thread.sleep(time);
-            sendQueue.add(packet);
-        }
+        };
+        t.start();
     }
 
     private void handler() throws Exception {
@@ -151,6 +147,7 @@ public class PerfectLink {
                 }
                 // ***** CASE 2 - THE PACKET IS A MESSAGE *****
             } else {
+                //System.out.println("Message received, seq = "+sequenceNumber);
                 // this synchronized blocks adds enough elements to the list to fit the received message
                 // at its position corresponding to the sequence numbers.
                 synchronized (messagesToDeliver) {
@@ -164,7 +161,7 @@ public class PerfectLink {
                 if (localAcks[id] == sequenceNumber) {
                     synchronized (messagesToDeliver) {
                         messagesToDeliver.get(id).set(sequenceNumber, packet.getData());
-                        for(int i = sequenceNumber; i < messagesToDeliver.size(); i++){
+                        for(int i = sequenceNumber; i < messagesToDeliver.get(id).size(); i++){
                             String message = messagesToDeliver.get(id).get(i);
                             if(message == null){
                                 break;
