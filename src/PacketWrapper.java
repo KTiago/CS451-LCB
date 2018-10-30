@@ -62,7 +62,7 @@ public class PacketWrapper {
     }
 
     //Return a String of a slice of an byte of array
-    private String toString(byte[] bytes, int offset, ,int length) {
+    private String toString(byte[] bytes, int offset,int length) {
         //ISO-8859-1 is the default charset encoding
             return new String(Arrays.copyOfRange(bytes, offset, offset + length));
     }
