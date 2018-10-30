@@ -1,10 +1,14 @@
+import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.nio.ByteBuffer;
 
 public class PacketWrapper {
 
     private final int SIZEHEADER = 5;
+    private static final int ACK = 6;
+    private static final int notACK = 0;
     private Boolean isACK;
     private int sequenceNumber;
     private InetAddress IP;
@@ -50,7 +54,7 @@ public class PacketWrapper {
         //The ACK byte if the first byte
         int ACKbyte = content[0];
         //If the ACkbyte is 6 then the packet is an ACK packet
-        if(ACKbyte == 6){
+        if(ACKbyte == ACK){
             this.isACK = true;
             this.data = null;
         } else {
@@ -77,15 +81,37 @@ public class PacketWrapper {
         return ret;
     }
 
+    //Return the Header given a sequence number and isAck
+    private static byte[] header(int sequenceNumber, Boolean isACK){
+        byte[] seq = ByteBuffer.allocate(4).putInt(sequenceNumber).array();
+        byte ackByte;
+
+        //Set ackByte to ACK if it is an ACK and to notACK otherwise
+        if(isACK){
+            ackByte = (byte)ACK;
+        }else {
+            ackByte = (byte)notACK;
+        }
+        return new byte[]{ackByte,seq[0],seq[1],seq[2],seq[3]};
+    }
+
     //Create a DatagramPacket corresponding to an ACK
     public static DatagramPacket createACK(int sequenceNumber, InetAddress destinationIP,int destinationPort){
-        return null;
-        //TODO
+        byte[] content = header(sequenceNumber,true);
+        return new DatagramPacket(content, content.length, destinationIP, destinationPort);
     }
 
     //Create a DatagramPacket corresponding to a Simple Message
     public static DatagramPacket createSimpleMessage(String message, int sequenceNumber, InetAddress destinationIP, int destinationPort){
-        return null;
-        //TODO
+        //Merge header and content
+        byte[] header = header(sequenceNumber,false);
+        byte[] msg = message.getBytes();
+        int aLen = header.length;
+        int bLen = msg.length;
+        byte[] content = new byte[aLen+bLen];
+        System.arraycopy(header, 0, content, 0, aLen);
+        System.arraycopy(msg, 0, content, aLen, bLen);
+
+        return new DatagramPacket(content,content.length,destinationIP,destinationPort);
     }
 }
