@@ -1,6 +1,7 @@
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -11,11 +12,11 @@ public class UniformReliableBroadcast {
     private int majority;
     private PerfectLink perfectLink;
     //Map the message to the number of ack received for that message
-    private HashMap<Pair<Integer,Integer>,Integer> nbrAcks = new HashMap<>();
-    private HashMap<Pair<Integer,Integer>,String> messages = new HashMap<>();
+    private HashMap<Pair<Integer, Integer>, Set<Integer>> nbrAcks = new HashMap<>();
+    private HashMap<Pair<Integer, Integer>, String> messages = new HashMap<>();
     private Set<Pair<Integer, Integer>> delivered;
 
-    private BlockingQueue<String> receiveQueue = new LinkedBlockingQueue<>();
+    private BlockingQueue<Pair<String, Integer>> receiveQueue = new LinkedBlockingQueue<>();
 
     //List to store the messages that have been sent
     private int selfId;
@@ -23,7 +24,7 @@ public class UniformReliableBroadcast {
     private Thread t1;
 
 
-    public UniformReliableBroadcast(HashMap<Integer, Pair<String,Integer>> peers, int selfId) throws Exception{
+    public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId) throws Exception {
         this.peers = peers.keySet();
         this.perfectLink = new PerfectLink(this, peers.get(selfId).first, peers.get(selfId).second, peers);
         this.majority = peers.size() / 2 + 1;
@@ -40,37 +41,44 @@ public class UniformReliableBroadcast {
         };
     }
 
-    public void start(){
+    public void start() {
         t1.start();
         perfectLink.start();
     }
-    public void stop(){
+
+    public void stop() {
         t1.stop();
         perfectLink.stop();
     }
 
-    public void plDeliver(String payload){
-        this.receiveQueue.add(payload);
+    public void plDeliver(String payload, Integer senderID) {
+        this.receiveQueue.add(Pair.of(payload, senderID));
     }
 
     //Start Broadcasting a message
-    public void broadcast(String message){
-        broadcast(message, Pair.of(sequenceNumber++, selfId), selfId);
+    public void broadcast(String message) {
+        Pair<Integer, Integer> messageIdentifier = Pair.of(sequenceNumber++, selfId);
+        broadcast(message, messageIdentifier);
+        Set<Integer> ackedSet = new HashSet<>();
+        ackedSet.add(selfId);
+        nbrAcks.put(messageIdentifier, ackedSet);
     }
 
-    private void broadcast(String message, Pair<Integer,Integer> messageId, int source) {
-        for (Integer id : peers){
-            if (id != selfId && id != source){
-                String senderId = Utils.intToString(messageId.first);
-                String sequence = Utils.intToString(messageId.second);
-                perfectLink.send(senderId+sequence+message, id);
+    private void broadcast(String message, Pair<Integer, Integer> messageIdentifier) {
+        for (Integer id : peers) {
+            if (!nbrAcks.containsKey(messageIdentifier)) {
+                String senderId = Utils.intToString(messageIdentifier.first);
+                String sequence = Utils.intToString(messageIdentifier.second);
+                perfectLink.send(senderId + sequence + message, id);
             }
         }
     }
 
-    private void handler() throws Exception{
-        while(true){
-            String payload = receiveQueue.take();
+    private void handler() throws Exception {
+        while (true) {
+            Pair<String, Integer> payloadAndId = receiveQueue.take();
+            String payload = payloadAndId.first;
+            Integer senderId = payloadAndId.second;
 
             // Unpacking
             byte[] bytes = payload.getBytes();
@@ -79,20 +87,43 @@ public class UniformReliableBroadcast {
             String message = Utils.bytesArraytoString(bytes, 8, payload.length() - 8);
 
             Pair<Integer, Integer> messageIdentifier = Pair.of(id, sequence);
-            if(!delivered.contains(messageIdentifier)) {
-                messages.putIfAbsent(messageIdentifier, message);
-                Integer nbrAck = nbrAcks.getOrDefault(messageIdentifier, 0) + 1;
-                nbrAcks.put(messageIdentifier, nbrAck);
-                if (nbrAck == majority) {
-                    delivered.add(messageIdentifier);
-                    deliver(id, sequence, message);
-                }
+
+            Set<Integer> ackedSet;
+
+            // When it's the first time we see a message
+            if (!messages.containsKey(messageIdentifier)) {
+                // Add message to all messages seen so far
+                messages.put(messageIdentifier, message);
+
+                ackedSet = new HashSet<>();
+                ackedSet.add(selfId);
+                // Add sender of message to peers who acked it
+                ackedSet.add(senderId);
+                // Add origin of message to peers who acked it
+                ackedSet.add(id);
+                nbrAcks.put(messageIdentifier, ackedSet);
+                broadcast(message, messageIdentifier);
+
+            } else { //When it's not the first time we see a message
+                ackedSet = nbrAcks.get(messageIdentifier);
+                ackedSet.add(senderId);
+            }
+
+            // If we have enough ACKS for the message, we can deliver it
+            if (ackedSet.size() >= majority && !delivered.contains(messageIdentifier)) {
+                delivered.add(messageIdentifier);
+                deliver(id, sequence, message);
+            }
+
+            // We ack any message that is not itself an ACK
+            if(message.length() > 0){
+                perfectLink.send(payload.substring(0, 8), senderId);
             }
         }
     }
 
     //Callback method for perfect link
-    public void deliver(int id, int sequenceNumber, String message){
-        System.out.println("Delivered "+id+" "+sequenceNumber+" "+message);
+    public void deliver(int id, int sequenceNumber, String message) {
+        System.out.println("Delivered " + id + " " + sequenceNumber + " " + message);
     }
 }

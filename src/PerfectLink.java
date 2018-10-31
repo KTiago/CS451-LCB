@@ -92,8 +92,8 @@ public class PerfectLink {
         t3.stop();
     }
 
-    private void deliver(String message) {
-        urb.plDeliver(message);
+    private void deliver(String message, Integer senderID) {
+        urb.plDeliver(message, senderID);
     }
 
     public void send(String message, int destinationID) {
@@ -169,7 +169,7 @@ public class PerfectLink {
                             if(message == null){
                                 break;
                             }
-                            deliver(message);
+                            deliver(message, id);
                             localAcks[id]++;
                         }
                     }
