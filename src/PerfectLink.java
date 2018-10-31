@@ -9,6 +9,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class PerfectLink {
+    UniformReliableBroadcast urb;
 
     private final int DATAGRAM_LENGTH = 1024;
 
@@ -31,7 +32,9 @@ public class PerfectLink {
     private List<List<String>> messagesToSend;
     private List<List<String>> messagesToDeliver;
 
-    public PerfectLink(String sourceIP, int sourcePort, HashMap<Integer, Pair<String, Integer>> peers) throws Exception {
+    public PerfectLink(UniformReliableBroadcast urb, String sourceIP, int sourcePort, HashMap<Integer, Pair<String, Integer>> peers) throws Exception {
+        this.urb = urb;
+
         this.sourceIP = InetAddress.getByName(sourceIP);
         this.sourcePort = sourcePort;
         this.socket = new DatagramSocket(this.sourcePort, this.sourceIP);
@@ -89,8 +92,8 @@ public class PerfectLink {
         t3.stop();
     }
 
-    private void deliver(String message, int id) {
-        System.out.println("Delivered : "+message);
+    private void deliver(String message) {
+        urb.plDeliver(message);
     }
 
     public void send(String message, int destinationID) {
@@ -166,7 +169,7 @@ public class PerfectLink {
                             if(message == null){
                                 break;
                             }
-                            deliver(message, id);
+                            deliver(message);
                             localAcks[id]++;
                         }
                     }

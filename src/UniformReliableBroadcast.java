@@ -25,7 +25,7 @@ public class UniformReliableBroadcast {
 
     public UniformReliableBroadcast(HashMap<Integer, Pair<String,Integer>> peers, int selfId) throws Exception{
         this.peers = peers.keySet();
-        this.perfectLink = new PerfectLink(peers.get(selfId).first, peers.get(selfId).second, peers);
+        this.perfectLink = new PerfectLink(this, peers.get(selfId).first, peers.get(selfId).second, peers);
         this.majority = peers.size() / 2 + 1;
         this.selfId = selfId;
         this.t1 = new Thread() {
@@ -45,8 +45,12 @@ public class UniformReliableBroadcast {
         perfectLink.start();
     }
     public void stop(){
-        t1.start();
+        t1.stop();
         perfectLink.stop();
+    }
+
+    public void plDeliver(String payload){
+        this.receiveQueue.add(payload);
     }
 
     //Start Broadcasting a message
@@ -57,8 +61,9 @@ public class UniformReliableBroadcast {
     private void broadcast(String message, Pair<Integer,Integer> messageId, int source) {
         for (Integer id : peers){
             if (id != selfId && id != source){
-                // FIXME encode message first !
-                perfectLink.send(message, id);
+                String senderId = Utils.intToString(messageId.first);
+                String sequence = Utils.intToString(messageId.second);
+                perfectLink.send(senderId+sequence+message, id);
             }
         }
     }
@@ -66,9 +71,13 @@ public class UniformReliableBroadcast {
     private void handler() throws Exception{
         while(true){
             String payload = receiveQueue.take();
-            Integer id = 0;
-            Integer sequence = 0;
-            String message = "";
+
+            // Unpacking
+            byte[] bytes = payload.getBytes();
+            Integer id = Utils.bytesArraytoInt(bytes, 0);
+            Integer sequence = Utils.bytesArraytoInt(bytes, 4);
+            String message = Utils.bytesArraytoString(bytes, 8, payload.length() - 8);
+
             Pair<Integer, Integer> messageIdentifier = Pair.of(id, sequence);
             if(!delivered.contains(messageIdentifier)) {
                 messages.putIfAbsent(messageIdentifier, message);

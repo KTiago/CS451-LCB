@@ -1,7 +1,7 @@
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
-public static class Utils {
+public class Utils {
     //Return a String of a slice of an byte of array
     public static String bytesArraytoString(byte[] bytes, int offset,int length) {
         //ISO-8859-1 is the default charset encoding
