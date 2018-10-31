@@ -1,8 +1,6 @@
-import java.lang.reflect.Array;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.util.Arrays;
-import java.nio.ByteBuffer;
+
 
 public class PacketWrapper {
 
@@ -60,31 +58,16 @@ public class PacketWrapper {
             this.data = null;
         } else {
             this.isACK = false;
-            this.data = toString(content,SIZEHEADER,packet.getLength()-SIZEHEADER);
+            this.data = Utils.bytesArraytoString(content,SIZEHEADER,packet.getLength()-SIZEHEADER);
         }
-        this.sequenceNumber = toInt(content,1);
+        this.sequenceNumber = Utils.bytesArraytoInt(content,1);
 
     }
 
-    //Return a String of a slice of an byte of array
-    private String toString(byte[] bytes, int offset,int length) {
-        //ISO-8859-1 is the default charset encoding
-            return new String(Arrays.copyOfRange(bytes, offset, offset + length));
-    }
-    
-    //Return the integer corresponding to 4 bytes in an array at a given offset
-    private int toInt(byte[] bytes, int offset) {
-        int ret = 0;
-        for (int i=0; i<4 && i+offset<bytes.length; i++) {
-            ret <<= 8;
-            ret |= (int)bytes[i+offset] & 0xFF;
-        }
-        return ret;
-    }
 
     //Return the Header given a sequence number and isAck
     private static byte[] header(int sequenceNumber, Boolean isACK){
-        byte[] seq = ByteBuffer.allocate(4).putInt(sequenceNumber).array();
+        byte[] seq = Utils.intTo4BytesArray(sequenceNumber);
         byte ackByte;
 
         //Set ackByte to ACK if it is an ACK and to notACK otherwise
