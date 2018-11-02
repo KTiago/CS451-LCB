@@ -63,7 +63,7 @@ public class da_proc {
             int size = logs.size();
             FileWriter writer = new FileWriter(namefile);
             for (int i = 0; i < size;i++) {
-                Pair<Character, Integer> l = logs.get(i);
+                Pair<Integer, Integer> l = logs.get(i);
                 if(l.first == id){
                     writer.write("b " + l.second);
                 }else {
