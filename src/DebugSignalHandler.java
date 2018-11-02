@@ -23,7 +23,7 @@ public class DebugSignalHandler implements SignalHandler {
                 proc.stop();
                 break;
             case "SIGUSR2":
-                proc.start();
+                proc.usr2Signal();
                 break;
                 default:
                     System.out.println("Other Signal received");

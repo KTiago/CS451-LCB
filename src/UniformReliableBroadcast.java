@@ -11,6 +11,7 @@ public class UniformReliableBroadcast {
     private Set<Integer> peers;
     private int majority;
     private PerfectLink perfectLink;
+    private da_proc proc;
     //Map the message to the number of ack received for that message
     private HashMap<Pair<Integer, Integer>, Set<Integer>> nbrAcks = new HashMap<>();
     private HashMap<Pair<Integer, Integer>, String> messages = new HashMap<>();
@@ -25,11 +26,12 @@ public class UniformReliableBroadcast {
 
     private boolean debug = false;
 
-    public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId) throws Exception {
+    public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, da_proc proc) throws Exception {
         this.peers = peers.keySet();
         this.perfectLink = new PerfectLink(this, peers.get(selfId).first, peers.get(selfId).second, peers);
         this.majority = peers.size() / 2 + 1;
         this.selfId = selfId;
+        this.proc = proc;
         this.t1 = new Thread() {
             public void run() {
                 try {
@@ -133,6 +135,6 @@ public class UniformReliableBroadcast {
     //Callback method for perfect link
     public void deliver(int id, int sequenceNumber, String message) {
         if (debug) System.out.println("Delivered " + id + " " + sequenceNumber + " " + message);
-        System.out.println("Delivered : " + message);
+        proc.deliver(id,sequenceNumber,message);
     }
 }
