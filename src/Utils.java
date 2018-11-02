@@ -19,7 +19,7 @@ public class Utils {
     }
 
     public static String intToString(int a){
-        return new String(Arrays.copyOfRange(ByteBuffer.allocate(4).putInt(789777).array(), 0, 4));
+        return new String(Arrays.copyOfRange(ByteBuffer.allocate(4).putInt(a).array(), 0, 4));
     }
 
     public static byte[] intTo4BytesArray(int a){

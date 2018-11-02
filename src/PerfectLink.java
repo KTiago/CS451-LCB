@@ -49,13 +49,19 @@ public class PerfectLink {
         this.receiveQueue = new LinkedBlockingQueue<>();
         this.sendQueue = new LinkedBlockingQueue<>();
 
-        this.localAcks = new int[peers.size()];
-        this.remoteAcks = new int[peers.size()];
-        this.sequenceNumbers = new int[peers.size()];
+        this.localAcks = new int[peers.size() + 1];
+        this.remoteAcks = new int[peers.size() + 1];
+        this.sequenceNumbers = new int[peers.size() + 1];
         Arrays.fill(sequenceNumbers, -1);
 
-        this.messagesToSend = new ArrayList<>(Collections.nCopies(peers.size(), new ArrayList<>()));
-        this.messagesToDeliver = new ArrayList<>(Collections.nCopies(peers.size(), new ArrayList<>()));
+        this.messagesToSend = new ArrayList<>();
+        for(int i = 0; i < peers.size() + 1; i++){
+            this.messagesToSend.add(new ArrayList<>());
+        }
+        this.messagesToDeliver = new ArrayList<>();
+        for(int i = 0; i < peers.size() + 1; i++){
+            this.messagesToDeliver.add(new ArrayList<>());
+        }
 
         t1 = new Thread() {
             public void run() {
@@ -97,7 +103,7 @@ public class PerfectLink {
     }
 
     public void send(String message, int destinationID) {
-        System.out.println("Sending to "+destinationID+" - "+message);
+        //System.out.println("Sending to "+destinationID+" - "+message);
         synchronized (messagesToSend) {
             messagesToSend.get(destinationID).add(message);
         }
