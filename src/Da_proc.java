@@ -6,7 +6,7 @@ import java.util.concurrent.CountDownLatch;
 //USERNAME:da-user
 //PASSWORD:FIFObroadcast18
 
-public class da_proc {
+public class Da_proc {
 
     public static void main(String[] args) throws Exception {
         String membership = "";
@@ -27,7 +27,7 @@ public class da_proc {
         ParserMembership parser = new ParserMembership(membership);
         HashMap<Integer, Pair<String, Integer>> peers = parser.getPeers();
         System.out.println("Initializing.\n");
-        da_proc process = new da_proc(id_process,peers,numberMessages);
+        Da_proc process = new Da_proc(id_process,peers,numberMessages);
     }
 
 
@@ -40,8 +40,8 @@ public class da_proc {
     private ArrayList<Pair<Integer,Integer>> logs = new ArrayList<>();
     private UniformReliableBroadcast URB;
 
-    //Constructor of da_proc
-    public da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) {
+    //Constructor of Da_proc
+    public Da_proc(int id, HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) {
         this.id = id;
         this.membership = membership;
         this.numberMessages = numberMessages;
@@ -96,20 +96,17 @@ public class da_proc {
     //Print the log file in a output file.
     private void printLogs() {
         try {
-            String namefile = "da_proc"+id+".out";
+            String namefile = "Da_proc"+id+".out";
             int size = logs.size();
             FileWriter writer = new FileWriter(namefile);
             for (int i = 0; i < size;i++) {
                 Pair<Integer, Integer> l = logs.get(i);
                 if(l.first == id){
-                    writer.write("b " + l.second);
+                    writer.write("b " + l.second+"\n");
                 }else {
-                    writer.write("d " +l.first+" "+l.second);
+                    writer.write("d " +l.first+" "+l.second+"\n");
                 }
 
-                if(i < size-1){
-                    writer.write("\n");
-                }
             }
             writer.close();
         } catch (Exception e) {
