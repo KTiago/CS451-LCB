@@ -4,6 +4,7 @@
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -13,6 +14,8 @@ public class PerfectLink {
 
     private final int DATAGRAM_LENGTH = 1024;
 
+
+    private HashMap<Pair<Integer,Integer>, Pair<DatagramPacket, Long>> timerPackets = new HashMap<>();
     private InetAddress sourceIP;
     private int sourcePort;
     private DatagramSocket socket;
@@ -21,6 +24,7 @@ public class PerfectLink {
     private Thread t1;
     private Thread t2;
     private Thread t3;
+    private Thread t4;
     private BlockingQueue<PacketWrapper> receiveQueue;
     private BlockingQueue<DatagramPacket> sendQueue;
     // the array of sequence numbers for messages to be sent per peer
@@ -31,11 +35,9 @@ public class PerfectLink {
     private int[] remoteAcks;
     private List<List<String>> messagesToSend;
     private List<List<String>> messagesToDeliver;
-    private List<Thread> timers;
 
     public PerfectLink(UniformReliableBroadcast urb, String sourceIP, int sourcePort, HashMap<Integer, Pair<String, Integer>> peers) throws Exception {
         this.urb = urb;
-
         this.sourceIP = InetAddress.getByName(sourceIP);
         this.sourcePort = sourcePort;
         this.socket = new DatagramSocket(this.sourcePort, this.sourceIP);
@@ -49,7 +51,6 @@ public class PerfectLink {
 
         this.receiveQueue = new LinkedBlockingQueue<>();
         this.sendQueue = new LinkedBlockingQueue<>();
-        this.timers = new ArrayList<>();
 
         this.localAcks = new int[peers.size() + 1];
         this.remoteAcks = new int[peers.size() + 1];
@@ -85,6 +86,16 @@ public class PerfectLink {
                 }
             }
         };
+        t4 = new Thread() {
+            public void run() {
+                try {
+                    handleTimer();
+                }catch (Exception e){
+
+                }
+
+            }
+        };
 
     }
 
@@ -92,18 +103,15 @@ public class PerfectLink {
         t1.start();
         t2.start();
         t3.start();
+        t4.start();
     }
 
     public void stop() {
-        synchronized (timers) {
-            for (Thread thread : timers) {
-                thread.stop();
-            }
-        }
         socket.close();
         t1.stop();
         t2.stop();
         t3.stop();
+        t4.stop();
     }
 
     private void deliver(String message, Integer senderID) {
@@ -121,27 +129,32 @@ public class PerfectLink {
         DatagramPacket packet = PacketWrapper.createSimpleMessage(message, sequenceNumber, destinationIP, destinationPort);
         sendQueue.add(packet);
 
-        Thread t = new Thread(){
-            public void run() {
-                try {
-                    while(remoteAcks[destinationID] <= sequenceNumber){
-                        Thread.sleep(500);
+        synchronized (timerPackets) {
+            timerPackets.put(Pair.of(destinationID,sequenceNumber),Pair.of(packet,System.currentTimeMillis()));
+        }
+    }
+
+
+    private void handleTimer() throws Exception{
+        while (true){
+            long now = new Timestamp(System.currentTimeMillis()).getTime();
+            synchronized (timerPackets){
+            for(Pair<Integer,Integer> id_m : timerPackets.keySet()){
+                if(remoteAcks[id_m.first] > id_m.second){
+                    timerPackets.remove(id_m);
+                } else{
+                    if(now - timerPackets.get(id_m).second >= 100){
+                        System.out.println("Retransmission");
+                        DatagramPacket packet = timerPackets.get(id_m).first;
+                        timerPackets.remove(id_m);
+                        timerPackets.put(id_m,Pair.of(packet,now));
                         sendQueue.add(packet);
                     }
-                    Thread.currentThread().interrupt();
-                } catch (Exception e) {
-                    System.out.println("Killing timer");
-                    /*
-                    e.printStackTrace();
-                    System.exit(-1);
-                    */
                 }
             }
-        };
-        synchronized (timers) {
-            timers.add(t);
+            }
+            Thread.sleep(100);
         }
-        t.start();
     }
 
     private void handler() throws Exception {
