@@ -67,29 +67,17 @@ public class PerfectLink {
 
         t1 = new Thread() {
             public void run() {
-                try {
-                    receiveLoop();
-                } catch (Exception e) {
-                    this.interrupt();
-                }
+                receiveLoop();
             }
         };
         t2 = new Thread() {
             public void run() {
-                try {
-                    sendLoop();
-                } catch (Exception e) {
-                    this.interrupt();
-                }
+                sendLoop();
             }
         };
         t3 = new Thread() {
             public void run() {
-                try {
-                    handler();
-                } catch (Exception e) {
-                    this.interrupt();
-                }
+                handler();
             }
         };
 
@@ -132,7 +120,7 @@ public class PerfectLink {
             public void run() {
                 try {
                     while (!Thread.currentThread().isInterrupted() && remoteAcks[destinationID] <= sequenceNumber) {
-                        Thread.sleep(500);
+                        Thread.sleep(800);
                         sendQueue.add(packet);
                     }
                 } catch (Exception e) {
@@ -146,7 +134,7 @@ public class PerfectLink {
         t.start();
     }
 
-    private void handler(){
+    private void handler() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 PacketWrapper packet = receiveQueue.take();
@@ -213,7 +201,7 @@ public class PerfectLink {
         }
     }
 
-    private void receiveLoop() throws Exception {
+    private void receiveLoop() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 DatagramPacket packet = new DatagramPacket(new byte[DATAGRAM_LENGTH], DATAGRAM_LENGTH);
@@ -225,7 +213,7 @@ public class PerfectLink {
         }
     }
 
-    private void sendLoop() throws Exception {
+    private void sendLoop() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 DatagramPacket packet = sendQueue.take();

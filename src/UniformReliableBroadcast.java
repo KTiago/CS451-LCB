@@ -20,7 +20,7 @@ public class UniformReliableBroadcast {
 
     //List to store the messages that have been sent
     private int selfId;
-    private int sequenceNumber = 0;
+    private int sequenceNumber = 1;
     private Thread t1;
 
     private boolean debug = false;
