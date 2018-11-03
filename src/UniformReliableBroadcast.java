@@ -3,6 +3,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+
 //FIXME SEQUENCE SHOULD START AT 1 NOT AT 0
 public class UniformReliableBroadcast {
 
@@ -19,7 +20,7 @@ public class UniformReliableBroadcast {
 
     //List to store the messages that have been sent
     private int selfId;
-    private int sequenceNumber = 1;
+    private int sequenceNumber = 0;
     private Thread t1;
 
     private boolean debug = false;
@@ -32,12 +33,7 @@ public class UniformReliableBroadcast {
         this.proc = proc;
         this.t1 = new Thread() {
             public void run() {
-                try {
                     handler();
-                } catch (Exception e) {
-                    //e.printStackTrace();
-                    //System.exit(-1);
-                }
             }
         };
     }
@@ -49,7 +45,7 @@ public class UniformReliableBroadcast {
 
     public void stop() {
         perfectLink.stop();
-        t1.stop();
+        t1.interrupt();
     }
 
     public void plDeliver(String payload, Integer senderID) {
@@ -72,64 +68,69 @@ public class UniformReliableBroadcast {
                 String senderId = Utils.intToString(messageIdentifier.first);
                 String sequence = Utils.intToString(messageIdentifier.second);
                 perfectLink.send(senderId + sequence + message, id);
-                if (debug) System.out.println("Sending ("+messageIdentifier.first+","+messageIdentifier.second+") to "+id);
+                if (debug)
+                    System.out.println("Sending (" + messageIdentifier.first + "," + messageIdentifier.second + ") to " + id);
             }
         }
     }
 
-    private void handler() throws Exception {
-        while (true) {
-            Pair<String, Integer> payloadAndId = receiveQueue.take();
-            String payload = payloadAndId.first;
-            Integer senderId = payloadAndId.second;
+    private void handler(){
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                Pair<String, Integer> payloadAndId = receiveQueue.take();
+                String payload = payloadAndId.first;
+                Integer senderId = payloadAndId.second;
 
-            // Unpacking
-            byte[] bytes = payload.getBytes();
-            Integer id = Utils.bytesArraytoInt(bytes, 0);
-            Integer sequence = Utils.bytesArraytoInt(bytes, 4);
-            String message = Utils.bytesArraytoString(bytes, 8, payload.length() - 8);
-            if (debug) System.out.println("Received ("+id+","+sequence+") from "+senderId);
-            Pair<Integer, Integer> messageIdentifier = Pair.of(id, sequence);
+                // Unpacking
+                byte[] bytes = payload.getBytes();
+                Integer id = Utils.bytesArraytoInt(bytes, 0);
+                Integer sequence = Utils.bytesArraytoInt(bytes, 4);
+                String message = Utils.bytesArraytoString(bytes, 8, payload.length() - 8);
+                if (debug) System.out.println("Received (" + id + "," + sequence + ") from " + senderId);
+                Pair<Integer, Integer> messageIdentifier = Pair.of(id, sequence);
 
-            Set<Integer> ackedSet;
+                Set<Integer> ackedSet;
 
-            // When it's the first time we see a message
-            if (!messages.containsKey(messageIdentifier)) {
-                // Add message to all messages seen so far
-                messages.put(messageIdentifier, message);
+                // When it's the first time we see a message
+                if (!messages.containsKey(messageIdentifier)) {
+                    // Add message to all messages seen so far
+                    messages.put(messageIdentifier, message);
 
-                ackedSet = new HashSet<>();
-                ackedSet.add(selfId);
-                // Add sender of message to peers who acked it
-                ackedSet.add(senderId);
-                // Add origin of message to peers who acked it
-                ackedSet.add(id);
-                nbrAcks.put(messageIdentifier, ackedSet);
-                broadcast(message, messageIdentifier);
+                    ackedSet = new HashSet<>();
+                    ackedSet.add(selfId);
+                    // Add sender of message to peers who acked it
+                    ackedSet.add(senderId);
+                    // Add origin of message to peers who acked it
+                    ackedSet.add(id);
+                    nbrAcks.put(messageIdentifier, ackedSet);
+                    broadcast(message, messageIdentifier);
 
-            } else { //When it's not the first time we see a message
-                ackedSet = nbrAcks.get(messageIdentifier);
-                ackedSet.add(senderId);
+                } else { //When it's not the first time we see a message
+                    ackedSet = nbrAcks.get(messageIdentifier);
+                    ackedSet.add(senderId);
+                }
+
+                // If we have enough ACKS for the message, we can deliver it
+                if (ackedSet.size() >= majority && !delivered.contains(messageIdentifier)) {
+                    //System.out.println("Majority = "+majority);
+                    delivered.add(messageIdentifier);
+                    deliver(id, sequence, messages.get(messageIdentifier));
+                }
+
+                // We ack any message we have not yet acked
+                if (message.length() > 0) {
+                    perfectLink.send(payload.substring(0, 8), senderId);
+                    if (debug) System.out.println("Sending (" + id + "," + sequence + ") to " + senderId);
+                }
             }
-
-            // If we have enough ACKS for the message, we can deliver it
-            if (ackedSet.size() >= majority && !delivered.contains(messageIdentifier)) {
-                //System.out.println("Majority = "+majority);
-                delivered.add(messageIdentifier);
-                deliver(id, sequence, messages.get(messageIdentifier));
-            }
-
-            // We ack any message we have not yet acked
-            if(message.length() > 0){
-                perfectLink.send(payload.substring(0, 8), senderId);
-                if (debug) System.out.println("Sending ("+id+","+sequence+") to "+senderId);
-            }
+        } catch (Exception e) {
+            Thread.currentThread().interrupt();
         }
     }
 
     //Callback method for perfect link
     public void deliver(int id, int sequenceNumber, String message) {
-        proc.deliver(id,sequenceNumber,message);
-        if (debug) System.out.println("deliver "+id+" "+sequenceNumber);
+        proc.deliver(id, sequenceNumber, message);
+        if (debug) System.out.println("deliver " + id + " " + sequenceNumber);
     }
 }

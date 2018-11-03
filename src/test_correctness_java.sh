@@ -8,12 +8,12 @@
 
 # time to wait for correct processes to broadcast all messages (in seconds)
 # (should be adapted to the number of messages to send)
-time_to_finish=2
+time_to_finish=30
 
 init_time=2
 
 # configure lossy network simulation
-#sudo tc qdisc add dev lo root netem delay 50ms 200ms loss 10% 25% reorder 25% 50%
+sudo tc qdisc add dev lo root netem delay 50ms 200ms loss 10% 25% reorder 25% 50%
 
 # compile (should output: Da_proc.class)
 #make
@@ -42,7 +42,6 @@ sleep 1
 kill -TERM "${da_proc_id[2]}" # crash process 2
 da_proc_id[2]=""
 kill -CONT "${da_proc_id[3]}" # resume process 3
-
 # start broadcasting
 for i in `seq 1 5`
 do
@@ -69,7 +68,6 @@ do
 	kill -TERM "${da_proc_id[$i]}"
     fi
 done
-
 # wait until all processes stop
 for i in `seq 1 5`
 do
@@ -77,8 +75,7 @@ do
 	    wait "${da_proc_id[$i]}"
     fi
 done
-
 # check logs for correctness
 ./check_output.sh 1 3 5
-#sudo tc qdisc del dev lo root netem delay 50ms 200ms loss 10% 25% reorder 25% 50%
+sudo tc qdisc del dev lo root netem delay 50ms 200ms loss 10% 25% reorder 25% 50%
 echo "Correctness test done."

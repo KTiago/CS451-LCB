@@ -58,22 +58,30 @@ public class PerfectLink {
         Arrays.fill(sequenceNumbers, -1);
 
         this.messagesToSend = new ArrayList<>();
-        for(int i = 0; i < peers.size() + 1; i++){
+        for (int i = 0; i < peers.size() + 1; i++) {
             this.messagesToSend.add(new ArrayList<>());
         }
         this.messagesToDeliver = new ArrayList<>();
-        for(int i = 0; i < peers.size() + 1; i++){
+        for (int i = 0; i < peers.size() + 1; i++) {
             this.messagesToDeliver.add(new ArrayList<>());
         }
 
         t1 = new Thread() {
             public void run() {
-                receiveLoop();
+                try {
+                    receiveLoop();
+                } catch (Exception e) {
+                    this.interrupt();
+                }
             }
         };
         t2 = new Thread() {
             public void run() {
-                sendLoop();
+                try {
+                    sendLoop();
+                } catch (Exception e) {
+                    this.interrupt();
+                }
             }
         };
         t3 = new Thread() {
@@ -81,8 +89,7 @@ public class PerfectLink {
                 try {
                     handler();
                 } catch (Exception e) {
-                    //e.printStackTrace();
-                    //System.exit(-1);
+                    this.interrupt();
                 }
             }
         };
@@ -91,7 +98,7 @@ public class PerfectLink {
                 try {
                     handleTimer();
                 }catch (Exception e){
-
+                    this.interrupt();
                 }
 
             }
@@ -107,11 +114,11 @@ public class PerfectLink {
     }
 
     public void stop() {
+        t1.interrupt();
+        t2.interrupt();
+        t3.interrupt();
+        t4.interrupt();
         socket.close();
-        t1.stop();
-        t2.stop();
-        t3.stop();
-        t4.stop();
     }
 
     private void deliver(String message, Integer senderID) {
@@ -136,7 +143,7 @@ public class PerfectLink {
 
 
     private void handleTimer() throws Exception{
-        while (true){
+        while (!Thread.currentThread().isInterrupted()){
             long now = new Timestamp(System.currentTimeMillis()).getTime();
             synchronized (timerPackets){
             for(Pair<Integer,Integer> id_m : timerPackets.keySet()){
@@ -157,95 +164,93 @@ public class PerfectLink {
         }
     }
 
-    private void handler() throws Exception {
-        while (true) {
-            PacketWrapper packet = receiveQueue.take();
-            int sequenceNumber = packet.getSequenceNumber();
-            int id = peersInverse.get(Pair.of(packet.getIP(), packet.getPort()));
-            // ***** CASE 1 - THE PACKET IS A AN ACK *****
-            if (packet.isACK()) {
-                int ack = packet.getSequenceNumber();
+    private void handler(){
+        try {
+            while (!Thread.currentThread().isInterrupted()) {
+                PacketWrapper packet = receiveQueue.take();
+                int sequenceNumber = packet.getSequenceNumber();
+                int id = peersInverse.get(Pair.of(packet.getIP(), packet.getPort()));
+                // ***** CASE 1 - THE PACKET IS A AN ACK *****
+                if (packet.isACK()) {
+                    int ack = packet.getSequenceNumber();
 
-                // This ack is not outdated
-                if (ack > remoteAcks[id]) {
-                    remoteAcks[id] = ack;
-                    // The ack corresponds to a message in memory
-                    if (ack <= sequenceNumbers[id]) {
-                        String message;
-                        synchronized (messagesToSend) {
-                            message = messagesToSend.get(id).get(ack);
-                        }
-                        DatagramPacket messagePacket = PacketWrapper.createSimpleMessage(message, ack, packet.getIP(), packet.getPort());
-                        sendQueue.add(messagePacket);
-                    }
-                    // This ack is outdated, nothing needs to be done
-                } else {
-                    // FIXME remove if indeed not needed
-                }
-                // ***** CASE 2 - THE PACKET IS A MESSAGE *****
-            } else {
-                //System.out.println("Message received, seq = "+sequenceNumber);
-                // this synchronized blocks adds enough elements to the list to fit the received message
-                // at its position corresponding to the sequence numbers.
-                synchronized (messagesToDeliver) {
-                    int size = messagesToDeliver.get(id).size();
-                    int difference = sequenceNumber - size + 1;
-                    if (difference > 0) {
-                        messagesToDeliver.get(id).addAll(Collections.nCopies(difference, null));
-                    }
-                }
-                // The message was the expected message in sequence.
-                if (localAcks[id] == sequenceNumber) {
-                    synchronized (messagesToDeliver) {
-                        messagesToDeliver.get(id).set(sequenceNumber, packet.getData());
-                        for(int i = sequenceNumber; i < messagesToDeliver.get(id).size(); i++){
-                            String message = messagesToDeliver.get(id).get(i);
-                            if(message == null){
-                                break;
+                    // This ack is not outdated
+                    if (ack > remoteAcks[id]) {
+                        remoteAcks[id] = ack;
+                        // The ack corresponds to a message in memory
+                        if (ack <= sequenceNumbers[id]) {
+                            String message;
+                            synchronized (messagesToSend) {
+                                message = messagesToSend.get(id).get(ack);
                             }
-                            deliver(message, id);
-                            localAcks[id]++;
+                            DatagramPacket messagePacket = PacketWrapper.createSimpleMessage(message, ack, packet.getIP(), packet.getPort());
+                            sendQueue.add(messagePacket);
+                        }
+                        // This ack is outdated, nothing needs to be done
+                    } else {
+                        // FIXME remove if indeed not needed
+                    }
+                    // ***** CASE 2 - THE PACKET IS A MESSAGE *****
+                } else {
+                    //System.out.println("Message received, seq = "+sequenceNumber);
+                    // this synchronized blocks adds enough elements to the list to fit the received message
+                    // at its position corresponding to the sequence numbers.
+                    synchronized (messagesToDeliver) {
+                        int size = messagesToDeliver.get(id).size();
+                        int difference = sequenceNumber - size + 1;
+                        if (difference > 0) {
+                            messagesToDeliver.get(id).addAll(Collections.nCopies(difference, null));
                         }
                     }
+                    // The message was the expected message in sequence.
+                    if (localAcks[id] == sequenceNumber) {
+                        synchronized (messagesToDeliver) {
+                            messagesToDeliver.get(id).set(sequenceNumber, packet.getData());
+                            for (int i = sequenceNumber; i < messagesToDeliver.get(id).size(); i++) {
+                                String message = messagesToDeliver.get(id).get(i);
+                                if (message == null) {
+                                    break;
+                                }
+                                deliver(message, id);
+                                localAcks[id]++;
+                            }
+                        }
+                    }
+                    // The message was not expected, either with higher or lower sequence number.
+                    else {
+                        //FIXME remove if indeed not needed
+                        //nothing special is to be done
+                    }
+                    // For any received message (in sequence or not) an ACK is sent with the next expected message sequence
+                    DatagramPacket ackPacket = PacketWrapper.createACK(localAcks[id], packet.getIP(), packet.getPort());
+                    sendQueue.add(ackPacket);
                 }
-                // The message was not expected, either with higher or lower sequence number.
-                else {
-                    //FIXME remove if indeed not needed
-                    //nothing special is to be done
-                }
-                // For any received message (in sequence or not) an ACK is sent with the next expected message sequence
-                DatagramPacket ackPacket = PacketWrapper.createACK(localAcks[id], packet.getIP(), packet.getPort());
-                sendQueue.add(ackPacket);
             }
+        } catch (Exception e) {
+            Thread.currentThread().interrupt();
         }
     }
 
-    private void receiveLoop() {
+    private void receiveLoop() throws Exception {
         try {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 DatagramPacket packet = new DatagramPacket(new byte[DATAGRAM_LENGTH], DATAGRAM_LENGTH);
                 socket.receive(packet);
                 receiveQueue.add(new PacketWrapper(packet));
             }
         } catch (Exception e) {
-            /*
-            e.printStackTrace();
-            System.exit(-1);
-            */
+            Thread.currentThread().interrupt();
         }
     }
 
-    private void sendLoop() {
+    private void sendLoop() throws Exception {
         try {
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 DatagramPacket packet = sendQueue.take();
                 socket.send(packet);
             }
         } catch (Exception e) {
-            /*
-            e.printStackTrace();
-            System.exit(-1);
-            */
+            Thread.currentThread().interrupt();
         }
     }
 
