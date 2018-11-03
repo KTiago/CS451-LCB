@@ -14,9 +14,9 @@ CLASSES = \
 		DebugSignalHandler.java\
 		PerfectLink.java\
 		UniformReliableBroadcast.java\
-		da_proc.java\
+		Da_proc.java\
 
-MAIN = da_proc
+MAIN = Da_proc
 
 default: classes
 
