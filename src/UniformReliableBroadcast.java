@@ -19,10 +19,10 @@ public class UniformReliableBroadcast {
 
     //List to store the messages that have been sent
     private int selfId;
-    private int sequenceNumber;
+    private int sequenceNumber = 1;
     private Thread t1;
 
-    private boolean debug = true;
+    private boolean debug = false;
 
     public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, Da_proc proc) throws Exception {
         this.peers = peers.keySet();

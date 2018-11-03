@@ -95,15 +95,15 @@ public class PerfectLink {
     }
 
     public void stop() {
-        socket.close();
-        t1.stop();
-        t2.stop();
-        t3.stop();
         synchronized (timers) {
             for (Thread thread : timers) {
                 thread.stop();
             }
         }
+        socket.close();
+        t1.stop();
+        t2.stop();
+        t3.stop();
     }
 
     private void deliver(String message, Integer senderID) {
@@ -128,6 +128,7 @@ public class PerfectLink {
                         Thread.sleep(500);
                         sendQueue.add(packet);
                     }
+                    Thread.currentThread().interrupt();
                 } catch (Exception e) {
                     System.out.println("Killing timer");
                     /*
