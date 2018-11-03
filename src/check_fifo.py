@@ -3,9 +3,9 @@
 import sys
 from collections import defaultdict
 
-i = 0
+i = 1
 l = 1
-nextMessage = defaultdict(lambda : 0)
+nextMessage = defaultdict(lambda : 1)
 
 with open(sys.argv[1]) as f:
     for line in f:
@@ -31,3 +31,5 @@ with open(sys.argv[1]) as f:
 
         # Increment line number counter
         l += 1
+    # this test only true when 3 processes are up and each broadcasts 100 messages"
+    print("There are "+str(l)+" lines")

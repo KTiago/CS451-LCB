@@ -27,7 +27,7 @@ public class Da_proc {
         //-- Use ParserMembership class to parse the membership table --
         ParserMembership parser = new ParserMembership(membership);
         HashMap<Integer, Pair<String, Integer>> peers = parser.getPeers();
-        System.out.println("Initializing.\n");
+        //System.out.println("Initializing.\n");
         Da_proc process = new Da_proc(id_process,peers,numberMessages);
         process.start();
     }
@@ -54,7 +54,7 @@ public class Da_proc {
     public void start() throws Exception{
         //Waiting to get USR2
         wait.await();
-        System.out.println("Start broadcasting/receiving");
+        //System.out.println("Start broadcasting/receiving");
         URB.start();
         for (int i = 0;i < numberMessages;++i){
             URB.broadcast(" ");
@@ -68,11 +68,9 @@ public class Da_proc {
 
     //Method invoked when the signal SIGTERM or SIGINT is received
     public void stop(){
-        System.out.println("Stopping process - "+id);
+        //System.out.println("Stopping process - "+id);
         printLogs();
-        System.out.println("Almost stopped process - "+id);
         URB.stop();
-        System.out.println("Logs successfully printed - "+id);
     }
 
 
