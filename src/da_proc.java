@@ -23,11 +23,17 @@ public class da_proc {
             membership = args[1];
             numberMessages = Integer.parseInt(args[2]);
         }
+
         //-- Use ParserMembership class to parse the membership table --
         ParserMembership parser = new ParserMembership(membership);
         HashMap<Integer, Pair<String, Integer>> peers = parser.getPeers();
         System.out.println("Initializing.\n");
         da_proc process = new da_proc(id_process,peers,numberMessages);
+        process.start();
+        /*
+        Thread.sleep(10000);
+        process.stop();
+        */
     }
 
 
@@ -36,30 +42,28 @@ public class da_proc {
     private int numberMessages;
     private volatile boolean isWaiting = true;
     private int id;
-    private HashMap<Integer, Pair<String,Integer>> membership;
     private ArrayList<Pair<Integer,Integer>> logs = new ArrayList<>();
     private UniformReliableBroadcast URB;
 
     //Constructor of da_proc
-    public da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) {
+    public da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) throws Exception{
         this.id = id;
-        this.membership = membership;
         this.numberMessages = numberMessages;
         URB = new UniformReliableBroadcast(membership,id,this);
         signalHandling();
-        start();
     }
 
 
     //Private Methods
 
 
-    public void start(){
+    public void start() throws Exception{
         //Waiting to get USR2
         wait.await();
+        System.out.println("Start broadcasting/receiving");
         URB.start();
         for (int i = 0;i < numberMessages;++i){
-            URB.broadcast("");
+            URB.broadcast(" ");
         }
     }
 
@@ -72,9 +76,8 @@ public class da_proc {
     public void stop(){
         System.out.println("Immediately stopping network packet processing.\n");
         URB.stop();
-        System.out.println("Writing output.");
         printLogs();
-        System.exit(0);
+        System.out.println("Logs successfully printed");
     }
 
 
@@ -96,7 +99,7 @@ public class da_proc {
     //Print the log file in a output file.
     private void printLogs() {
         try {
-            String namefile = "da_proc"+id+".out";
+            String namefile = "da_proc_"+id+".out";
             int size = logs.size();
             FileWriter writer = new FileWriter(namefile);
             for (int i = 0; i < size;i++) {
@@ -106,7 +109,6 @@ public class da_proc {
                 }else {
                     writer.write("d " +l.first+" "+l.second);
                 }
-
                 if(i < size-1){
                     writer.write("\n");
                 }

@@ -15,8 +15,8 @@ CLASSES = \
 		PerfectLink.java\
 		UniformReliableBroadcast.java\
 		da_proc.java\
-		Main.java \
 
+MAIN = da_proc
 
 default: classes
 

@@ -5,7 +5,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-
+//FIXME SEQUENCE SHOULD START AT 1 NOT AT 0
 public class UniformReliableBroadcast {
 
     private Set<Integer> peers;
@@ -24,7 +24,7 @@ public class UniformReliableBroadcast {
     private int sequenceNumber;
     private Thread t1;
 
-    private boolean debug = false;
+    private boolean debug = true;
 
     public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, da_proc proc) throws Exception {
         this.peers = peers.keySet();
@@ -37,8 +37,8 @@ public class UniformReliableBroadcast {
                 try {
                     handler();
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    System.exit(-1);
+                    //e.printStackTrace();
+                    //System.exit(-1);
                 }
             }
         };
@@ -50,18 +50,16 @@ public class UniformReliableBroadcast {
     }
 
     public void stop() {
-        t1.stop();
         perfectLink.stop();
+        t1.stop();
     }
 
     public void plDeliver(String payload, Integer senderID) {
-        if (debug) System.out.println("Pf received "+payload.substring(8, payload.length())+" from "+senderID);
         this.receiveQueue.add(Pair.of(payload, senderID));
     }
 
     //Start Broadcasting a message
     public void broadcast(String message) {
-        if (debug) System.out.println("Broadcasting :"+message);
         Pair<Integer, Integer> messageIdentifier = Pair.of(selfId, sequenceNumber++);
         Set<Integer> ackedSet = new HashSet<>();
         ackedSet.add(selfId);
@@ -76,7 +74,7 @@ public class UniformReliableBroadcast {
                 String senderId = Utils.intToString(messageIdentifier.first);
                 String sequence = Utils.intToString(messageIdentifier.second);
                 perfectLink.send(senderId + sequence + message, id);
-                if (debug) System.out.println("Pf sent (bcast) "+message+" to "+id);
+                if (debug) System.out.println("Sending ("+messageIdentifier.first+","+messageIdentifier.second+") to "+id);
             }
         }
     }
@@ -92,7 +90,7 @@ public class UniformReliableBroadcast {
             Integer id = Utils.bytesArraytoInt(bytes, 0);
             Integer sequence = Utils.bytesArraytoInt(bytes, 4);
             String message = Utils.bytesArraytoString(bytes, 8, payload.length() - 8);
-
+            if (debug) System.out.println("Received ("+id+","+sequence+") from "+senderId);
             Pair<Integer, Integer> messageIdentifier = Pair.of(id, sequence);
 
             Set<Integer> ackedSet;
@@ -123,18 +121,17 @@ public class UniformReliableBroadcast {
                 deliver(id, sequence, messages.get(messageIdentifier));
             }
 
-            // We ack any message that is not itself an ACK
+            // We ack any message we have not yet acked
             if(message.length() > 0){
                 perfectLink.send(payload.substring(0, 8), senderId);
-                if (debug) System.out.println("Pf sent "+message+" to "+senderId);
+                if (debug) System.out.println("Sending ("+id+","+sequence+") to "+senderId);
             }
-            if (debug) System.out.println(messageIdentifier + " acked set = "+ackedSet);
         }
     }
 
     //Callback method for perfect link
     public void deliver(int id, int sequenceNumber, String message) {
-        if (debug) System.out.println("Delivered " + id + " " + sequenceNumber + " " + message);
         proc.deliver(id,sequenceNumber,message);
+        if (debug) System.out.println("deliver "+id+" "+sequenceNumber);
     }
 }

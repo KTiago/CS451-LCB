@@ -31,6 +31,7 @@ public class PerfectLink {
     private int[] remoteAcks;
     private List<List<String>> messagesToSend;
     private List<List<String>> messagesToDeliver;
+    private List<Thread> timers;
 
     public PerfectLink(UniformReliableBroadcast urb, String sourceIP, int sourcePort, HashMap<Integer, Pair<String, Integer>> peers) throws Exception {
         this.urb = urb;
@@ -48,6 +49,7 @@ public class PerfectLink {
 
         this.receiveQueue = new LinkedBlockingQueue<>();
         this.sendQueue = new LinkedBlockingQueue<>();
+        this.timers = new ArrayList<>();
 
         this.localAcks = new int[peers.size() + 1];
         this.remoteAcks = new int[peers.size() + 1];
@@ -78,8 +80,8 @@ public class PerfectLink {
                 try {
                     handler();
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    System.exit(-1);
+                    //e.printStackTrace();
+                    //System.exit(-1);
                 }
             }
         };
@@ -93,9 +95,15 @@ public class PerfectLink {
     }
 
     public void stop() {
+        socket.close();
         t1.stop();
         t2.stop();
         t3.stop();
+        synchronized (timers) {
+            for (Thread thread : timers) {
+                thread.stop();
+            }
+        }
     }
 
     private void deliver(String message, Integer senderID) {
@@ -117,15 +125,21 @@ public class PerfectLink {
             public void run() {
                 try {
                     while(remoteAcks[destinationID] <= sequenceNumber){
-                        Thread.sleep(1000);
+                        Thread.sleep(500);
                         sendQueue.add(packet);
                     }
                 } catch (Exception e) {
+                    System.out.println("Killing timer");
+                    /*
                     e.printStackTrace();
                     System.exit(-1);
+                    */
                 }
             }
         };
+        synchronized (timers) {
+            timers.add(t);
+        }
         t.start();
     }
 
@@ -200,8 +214,10 @@ public class PerfectLink {
                 receiveQueue.add(new PacketWrapper(packet));
             }
         } catch (Exception e) {
+            /*
             e.printStackTrace();
             System.exit(-1);
+            */
         }
     }
 
@@ -212,8 +228,10 @@ public class PerfectLink {
                 socket.send(packet);
             }
         } catch (Exception e) {
+            /*
             e.printStackTrace();
             System.exit(-1);
+            */
         }
     }
 
