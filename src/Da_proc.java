@@ -28,7 +28,7 @@ public class Da_proc {
         ParserMembership parser = new ParserMembership(membership);
         HashMap<Integer, Pair<String, Integer>> peers = parser.getPeers();
         System.out.println("Initializing.\n");
-        da_proc process = new da_proc(id_process,peers,numberMessages);
+        Da_proc process = new Da_proc(id_process,peers,numberMessages);
         process.start();
     }
 
@@ -42,7 +42,7 @@ public class Da_proc {
     private UniformReliableBroadcast URB;
 
     //Constructor of da_proc
-    public da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) throws Exception{
+    public Da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) throws Exception{
         this.id = id;
         this.numberMessages = numberMessages;
         URB = new UniformReliableBroadcast(membership,id,this);
