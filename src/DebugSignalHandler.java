@@ -5,9 +5,9 @@ import sun.misc.SignalHandler;
 //Class to handle signals
 public class DebugSignalHandler implements SignalHandler {
 
-    private da_proc proc;
+    private Da_proc proc;
 
-    public DebugSignalHandler(da_proc proc) {
+    public DebugSignalHandler(Da_proc proc) {
         this.proc = proc;
     }
 

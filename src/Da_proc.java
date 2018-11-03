@@ -6,7 +6,7 @@ import java.util.concurrent.CountDownLatch;
 //USERNAME:da-user
 //PASSWORD:FIFObroadcast18
 
-public class da_proc {
+public class Da_proc {
 
     public static void main(String[] args) throws Exception {
         String membership = "";
@@ -30,10 +30,6 @@ public class da_proc {
         System.out.println("Initializing.\n");
         da_proc process = new da_proc(id_process,peers,numberMessages);
         process.start();
-        /*
-        Thread.sleep(10000);
-        process.stop();
-        */
     }
 
 
@@ -105,12 +101,9 @@ public class da_proc {
             for (int i = 0; i < size;i++) {
                 Pair<Integer, Integer> l = logs.get(i);
                 if(l.first == id){
-                    writer.write("b " + l.second);
+                    writer.write("b " + l.second+"\n");
                 }else {
-                    writer.write("d " +l.first+" "+l.second);
-                }
-                if(i < size-1){
-                    writer.write("\n");
+                    writer.write("d " +l.first+" "+l.second+"\n");
                 }
             }
             writer.close();
