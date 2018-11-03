@@ -68,10 +68,11 @@ public class Da_proc {
 
     //Method invoked when the signal SIGTERM or SIGINT is received
     public void stop(){
-        System.out.println("Immediately stopping network packet processing.\n");
-        URB.stop();
+        System.out.println("Stopping process - "+id);
         printLogs();
-        System.out.println("Logs successfully printed");
+        System.out.println("Almost stopped process - "+id);
+        URB.stop();
+        System.out.println("Logs successfully printed - "+id);
     }
 
 

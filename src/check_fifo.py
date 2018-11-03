@@ -3,9 +3,9 @@
 import sys
 from collections import defaultdict
 
-i = 1
+i = 0
 l = 1
-nextMessage = defaultdict(lambda : 1)
+nextMessage = defaultdict(lambda : 0)
 
 with open(sys.argv[1]) as f:
     for line in f:
