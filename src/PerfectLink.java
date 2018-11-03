@@ -4,7 +4,6 @@
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.sql.Timestamp;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -95,12 +94,7 @@ public class PerfectLink {
         };
         t4 = new Thread() {
             public void run() {
-                try {
                     handleTimer();
-                }catch (Exception e){
-                    this.interrupt();
-                }
-
             }
         };
 
@@ -142,26 +136,39 @@ public class PerfectLink {
     }
 
 
-    private void handleTimer() throws Exception{
-        while (!Thread.currentThread().isInterrupted()){
-            long now = new Timestamp(System.currentTimeMillis()).getTime();
-            synchronized (timerPackets){
-            for(Pair<Integer,Integer> id_m : timerPackets.keySet()){
-                if(remoteAcks[id_m.first] > id_m.second){
-                    timerPackets.remove(id_m);
-                } else{
-                    if(now - timerPackets.get(id_m).second >= 100){
-                        System.out.println("Retransmission");
-                        DatagramPacket packet = timerPackets.get(id_m).first;
-                        timerPackets.remove(id_m);
-                        timerPackets.put(id_m,Pair.of(packet,now));
-                        sendQueue.add(packet);
+    private void handleTimer() {
+    try{
+        while (!Thread.currentThread().isInterrupted()) {
+            synchronized (timerPackets) {
+                long now = System.currentTimeMillis();
+                List<Pair<Integer,Integer>> toBeRemoved = new ArrayList<>();
+                List<Pair<Integer,Integer>> toBeRetransmitted= new ArrayList<>();
+                for (Pair<Integer, Integer> id_m : timerPackets.keySet()) {
+                    if (remoteAcks[id_m.first] > id_m.second) {
+                        toBeRemoved.add(id_m);
+                    } else {
+                        if (now - timerPackets.get(id_m).second >= 100) {
+                            toBeRetransmitted.add(id_m);
+                        }
                     }
                 }
+                for (Pair<Integer, Integer> id_m:toBeRemoved){
+                    timerPackets.remove(id_m);
+                }
+                for (Pair<Integer,Integer> id_m:toBeRetransmitted){
+                    DatagramPacket packet = timerPackets.get(id_m).first;
+                    timerPackets.put(id_m, Pair.of(packet, now));
+                    sendQueue.add(packet);
+                }
+
+
             }
-            }
-            Thread.sleep(100);
+            Thread.sleep(10);
         }
+    } catch (Exception e){
+        Thread.currentThread().interrupt();
+    }
+
     }
 
     private void handler(){
