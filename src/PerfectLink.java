@@ -1,6 +1,3 @@
-
-
-
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -12,7 +9,8 @@ public class PerfectLink {
     UniformReliableBroadcast urb;
 
     private final int DATAGRAM_LENGTH = 1024;
-
+    private final int INITIAL_TIMEOUT = 100;
+    private final int MAXIMUM_TIMEOUT_FACTOR = 100;
 
     private HashMap<Pair<Integer,Integer>, Pair<DatagramPacket, Long>> timerPackets = new HashMap<>();
     private InetAddress sourceIP;
@@ -32,6 +30,7 @@ public class PerfectLink {
     private int[] localAcks;
     // the array of the last (highest value) ACK received per peer
     private int[] remoteAcks;
+    private int[] timeoutFactors;
     private List<List<String>> messagesToSend;
     private List<List<String>> messagesToDeliver;
 
@@ -55,6 +54,8 @@ public class PerfectLink {
         this.remoteAcks = new int[peers.size() + 1];
         this.sequenceNumbers = new int[peers.size() + 1];
         Arrays.fill(sequenceNumbers, -1);
+        this.timeoutFactors = new int[peers.size() + 1];
+        Arrays.fill(timeoutFactors, 1);
 
         this.messagesToSend = new ArrayList<>();
         for (int i = 0; i < peers.size() + 1; i++) {
@@ -82,7 +83,7 @@ public class PerfectLink {
         };
         t4 = new Thread() {
             public void run() {
-                    handleTimer();
+                handleTimer();
             }
         };
 
@@ -126,38 +127,41 @@ public class PerfectLink {
 
 
     private void handleTimer() {
-    try{
-        while (!Thread.currentThread().isInterrupted()) {
-            synchronized (timerPackets) {
-                long now = System.currentTimeMillis();
-                List<Pair<Integer,Integer>> toBeRemoved = new ArrayList<>();
-                List<Pair<Integer,Integer>> toBeRetransmitted= new ArrayList<>();
-                for (Pair<Integer, Integer> id_m : timerPackets.keySet()) {
-                    //TODO strictly smaller or not ?!
-                    if (remoteAcks[id_m.first] > id_m.second) {
-                        toBeRemoved.add(id_m);
-                    } else {
-                        if (now - timerPackets.get(id_m).second >= 100) {
-                            toBeRetransmitted.add(id_m);
+        try{
+            while (!Thread.currentThread().isInterrupted()) {
+                synchronized (timerPackets) {
+                    long now = System.currentTimeMillis();
+                    List<Pair<Integer,Integer>> toBeRemoved = new ArrayList<>();
+                    List<Pair<Integer,Integer>> toBeRetransmitted= new ArrayList<>();
+                    for (Pair<Integer, Integer> id_m : timerPackets.keySet()) {
+                        //TODO strictly smaller or not ?!
+                        if (remoteAcks[id_m.first] > id_m.second) {
+                            toBeRemoved.add(id_m);
+                        } else {
+                            if (now - timerPackets.get(id_m).second >= INITIAL_TIMEOUT * timeoutFactors[id_m.first]) {
+                                toBeRetransmitted.add(id_m);
+                                if (timeoutFactors[id_m.first] < MAXIMUM_TIMEOUT_FACTOR){
+                                    timeoutFactors[id_m.first] += 2;
+                                }
+                            }
                         }
                     }
-                }
-                for (Pair<Integer, Integer> id_m:toBeRemoved){
-                    timerPackets.remove(id_m);
-                }
-                for (Pair<Integer,Integer> id_m:toBeRetransmitted){
-                    DatagramPacket packet = timerPackets.get(id_m).first;
-                    timerPackets.put(id_m, Pair.of(packet, now));
-                    sendQueue.add(packet);
-                }
+                    for (Pair<Integer, Integer> id_m:toBeRemoved){
+                        timerPackets.remove(id_m);
+                    }
+                    for (Pair<Integer,Integer> id_m:toBeRetransmitted){
+                        DatagramPacket packet = timerPackets.get(id_m).first;
+                        timerPackets.put(id_m, Pair.of(packet, now));
+                        sendQueue.add(packet);
+                    }
 
 
+                }
+                Thread.sleep(10);
             }
-            Thread.sleep(10);
+        } catch (Exception e){
+            Thread.currentThread().interrupt();
         }
-    } catch (Exception e){
-        Thread.currentThread().interrupt();
-    }
 
     }
 
@@ -167,6 +171,7 @@ public class PerfectLink {
                 PacketWrapper packet = receiveQueue.take();
                 int sequenceNumber = packet.getSequenceNumber();
                 int id = peersInverse.get(Pair.of(packet.getIP(), packet.getPort()));
+                timeoutFactors[id] = 1;
                 // ***** CASE 1 - THE PACKET IS A AN ACK *****
                 if (packet.isACK()) {
                     int ack = packet.getSequenceNumber();

@@ -52,10 +52,10 @@ public class Da_proc {
 
 
     public void start() throws Exception{
+        URB.start();//FIXME make sure I can start urb in that order
         //Waiting to get USR2
         wait.await();
         //System.out.println("Start broadcasting/receiving");
-        URB.start();
         for (int i = 0;i < numberMessages;++i){
             URB.broadcast(" ");
         }

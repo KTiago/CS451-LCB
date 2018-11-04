@@ -13,14 +13,14 @@ public class UniformReliableBroadcast {
     private PerfectLink perfectLink;
     private Da_proc proc;
     //Map the message to the number of ack received for that message
-    private HashMap<Pair<Integer, Integer>, Set<Integer>> nbrAcks = new HashMap<>();
-    private HashMap<Pair<Integer, Integer>, String> messages = new HashMap<>();
-    private Set<Pair<Integer, Integer>> delivered = new HashSet<>();
+    private final HashMap<Pair<Integer, Integer>, Set<Integer>> nbrAcks = new HashMap<>();
+    private final HashMap<Pair<Integer, Integer>, String> messages = new HashMap<>();
+    private final Set<Pair<Integer, Integer>> delivered = new HashSet<>();
 
     private BlockingQueue<Pair<String, Integer>> receiveQueue = new LinkedBlockingQueue<>();
 
     //List to store the messages that have been sent
-    private int selfId;
+    public int selfId; //FIXME
     private int sequenceNumber = 1;
     private Thread t1;
 
@@ -58,19 +58,25 @@ public class UniformReliableBroadcast {
         Pair<Integer, Integer> messageIdentifier = Pair.of(selfId, sequenceNumber++);
         Set<Integer> ackedSet = new HashSet<>();
         ackedSet.add(selfId);
-        nbrAcks.put(messageIdentifier, ackedSet);
-        messages.put(messageIdentifier, message);
+        synchronized(nbrAcks){
+            nbrAcks.put(messageIdentifier, ackedSet);
+        }
+        synchronized (message) {
+            messages.put(messageIdentifier, message);
+        }
         broadcast(message, messageIdentifier);
     }
 
     private void broadcast(String message, Pair<Integer, Integer> messageIdentifier) {
         for (Integer id : peers) {
-            if (!nbrAcks.get(messageIdentifier).contains(id)) {
-                String senderId = Utils.intToString(messageIdentifier.first);
-                String sequence = Utils.intToString(messageIdentifier.second);
-                perfectLink.send(senderId + sequence + message, id);
-                if (debug)
-                    System.out.println("Sending (" + messageIdentifier.first + "," + messageIdentifier.second + ") to " + id);
+            synchronized(nbrAcks) {
+                if (!nbrAcks.get(messageIdentifier).contains(id)) {
+                    String senderId = Utils.intToString(messageIdentifier.first);
+                    String sequence = Utils.intToString(messageIdentifier.second);
+                    perfectLink.send(senderId + sequence + message, id);
+                    if (debug && this.selfId == 1)
+                        System.out.println("Sending (" + messageIdentifier.first + "," + messageIdentifier.second + ") to " + id);
+                }
             }
         }
     }
@@ -87,15 +93,21 @@ public class UniformReliableBroadcast {
                 Integer id = Utils.bytesArraytoInt(bytes, 0);
                 Integer sequence = Utils.bytesArraytoInt(bytes, 4);
                 String message = Utils.bytesArraytoString(bytes, 8, payload.length() - 8);
-                if (debug) System.out.println("Received (" + id + "," + sequence + ") from " + senderId);
+                if (debug && this.selfId == 1) System.out.println("Received (" + id + "," + sequence + ") from " + senderId);
                 Pair<Integer, Integer> messageIdentifier = Pair.of(id, sequence);
 
                 Set<Integer> ackedSet;
 
                 // When it's the first time we see a message
-                if (!messages.containsKey(messageIdentifier)) {
+                boolean containsMessage;
+                synchronized (message) {
+                     containsMessage = messages.containsKey(messageIdentifier);
+                }
+                if (!containsMessage) {
                     // Add message to all messages seen so far
-                    messages.put(messageIdentifier, message);
+                    synchronized (messages) {
+                        messages.put(messageIdentifier, message);
+                    }
 
                     ackedSet = new HashSet<>();
                     ackedSet.add(selfId);
@@ -103,12 +115,16 @@ public class UniformReliableBroadcast {
                     ackedSet.add(senderId);
                     // Add origin of message to peers who acked it
                     ackedSet.add(id);
-                    nbrAcks.put(messageIdentifier, ackedSet);
+                    synchronized(nbrAcks) {
+                        nbrAcks.put(messageIdentifier, ackedSet);
+                    }
                     broadcast(message, messageIdentifier);
 
                 } else { //When it's not the first time we see a message
-                    ackedSet = nbrAcks.get(messageIdentifier);
-                    ackedSet.add(senderId);
+                    synchronized(nbrAcks) {
+                        ackedSet = nbrAcks.get(messageIdentifier);
+                        ackedSet.add(senderId);
+                    }
                 }
 
                 // If we have enough ACKS for the message, we can deliver it
@@ -121,7 +137,7 @@ public class UniformReliableBroadcast {
                 // We ack any message we have not yet acked
                 if (message.length() > 0) {
                     perfectLink.send(payload.substring(0, 8), senderId);
-                    if (debug) System.out.println("Sending (" + id + "," + sequence + ") to " + senderId);
+                    if (debug && this.selfId == 1) System.out.println("Sending (" + id + "," + sequence + ") to " + senderId);
                 }
             }
         } catch (Exception e) {
