@@ -1,3 +1,4 @@
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -82,7 +83,7 @@ public class UniformReliableBroadcast {
                 Integer senderId = payloadAndId.second;
 
                 // Unpacking
-                byte[] bytes = payload.getBytes();
+                byte[] bytes = payload.getBytes(Charset.forName("ISO-8859-1"));
                 Integer id = Utils.bytesArraytoInt(bytes, 0);
                 Integer sequence = Utils.bytesArraytoInt(bytes, 4);
                 String message = Utils.bytesArraytoString(bytes, 8, payload.length() - 8);

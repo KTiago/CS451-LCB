@@ -1,5 +1,6 @@
 import java.net.DatagramPacket;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 
 
 public class PacketWrapper {
@@ -89,7 +90,7 @@ public class PacketWrapper {
     public static DatagramPacket createSimpleMessage(String message, int sequenceNumber, InetAddress destinationIP, int destinationPort){
         //Merge header and content
         byte[] header = header(sequenceNumber,false);
-        byte[] msg = message.getBytes();
+        byte[] msg = message.getBytes(Charset.forName("ISO-8859-1"));
         int aLen = header.length;
         int bLen = msg.length;
         byte[] content = new byte[aLen+bLen];

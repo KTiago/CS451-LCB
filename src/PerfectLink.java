@@ -133,6 +133,7 @@ public class PerfectLink {
                 List<Pair<Integer,Integer>> toBeRemoved = new ArrayList<>();
                 List<Pair<Integer,Integer>> toBeRetransmitted= new ArrayList<>();
                 for (Pair<Integer, Integer> id_m : timerPackets.keySet()) {
+                    //TODO strictly smaller or not ?!
                     if (remoteAcks[id_m.first] > id_m.second) {
                         toBeRemoved.add(id_m);
                     } else {

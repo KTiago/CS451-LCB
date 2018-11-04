@@ -1,11 +1,12 @@
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 public class Utils {
     //Return a String of a slice of an byte of array
     public static String bytesArraytoString(byte[] bytes, int offset,int length) {
         //ISO-8859-1 is the default charset encoding
-        return new String(Arrays.copyOfRange(bytes, offset, offset + length));
+        return new String(Arrays.copyOfRange(bytes, offset, offset + length),Charset.forName("ISO-8859-1"));
     }
 
     //Return the integer corresponding to 4 bytes in an array at a given offset
@@ -19,7 +20,7 @@ public class Utils {
     }
 
     public static String intToString(int a){
-        return new String(Arrays.copyOfRange(ByteBuffer.allocate(4).putInt(a).array(), 0, 4));
+        return new String(Arrays.copyOfRange(ByteBuffer.allocate(4).putInt(a).array(), 0, 4),Charset.forName("ISO-8859-1"));
     }
 
     public static byte[] intTo4BytesArray(int a){
