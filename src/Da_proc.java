@@ -69,6 +69,7 @@ public class Da_proc {
     //Method invoked when the signal SIGTERM or SIGINT is received
     public void stop(){
         //System.out.println("Stopping process - "+id);
+        wait.countDown();
         printLogs();
         URB.stop();
     }
