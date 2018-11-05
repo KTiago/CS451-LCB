@@ -58,6 +58,7 @@ public class Da_proc {
         //System.out.println("Start broadcasting/receiving");
         for (int i = 0;i < numberMessages;++i){
             URB.broadcast(" ");
+            logs.add(Pair.of(-1,i + 1));
         }
     }
 
@@ -90,6 +91,7 @@ public class Da_proc {
         logs.add(Pair.of(id,sequenceNumber));
     }
 
+    //FIXME SHOULD DELIVER OWN MESSAGES AND BROADCAST THEM IN THE LOG
     //Print the log file in a output file.
     private void printLogs() {
         try {
@@ -98,7 +100,7 @@ public class Da_proc {
             FileWriter writer = new FileWriter(namefile);
             for (int i = 0; i < size;i++) {
                 Pair<Integer, Integer> l = logs.get(i);
-                if(l.first == id){
+                if(l.first == -1){
                     writer.write("b " + l.second+"\n");
                 }else {
                     writer.write("d " +l.first+" "+l.second+"\n");

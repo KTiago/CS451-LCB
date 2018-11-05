@@ -21,7 +21,7 @@ public class UniformReliableBroadcast {
 
     //List to store the messages that have been sent
     public int selfId; //FIXME
-    private int sequenceNumber = 1;
+    private Integer sequenceNumber = 1;
     private Thread t1;
 
     private boolean debug = false;
@@ -55,10 +55,11 @@ public class UniformReliableBroadcast {
 
     //Start Broadcasting a message
     public void broadcast(String message) {
-        Pair<Integer, Integer> messageIdentifier = Pair.of(selfId, sequenceNumber++);
+        Pair<Integer, Integer> messageIdentifier;
+        synchronized(sequenceNumber){
+        messageIdentifier = Pair.of(selfId, sequenceNumber++);
         Set<Integer> ackedSet = new HashSet<>();
         ackedSet.add(selfId);
-        synchronized(nbrAcks){
             nbrAcks.put(messageIdentifier, ackedSet);
         }
         synchronized (message) {
@@ -100,7 +101,7 @@ public class UniformReliableBroadcast {
 
                 // When it's the first time we see a message
                 boolean containsMessage;
-                synchronized (message) {
+                synchronized (messages) {
                      containsMessage = messages.containsKey(messageIdentifier);
                 }
                 if (!containsMessage) {
@@ -128,10 +129,14 @@ public class UniformReliableBroadcast {
                 }
 
                 // If we have enough ACKS for the message, we can deliver it
-                if (ackedSet.size() >= majority && !delivered.contains(messageIdentifier)) {
-                    //System.out.println("Majority = "+majority);
-                    delivered.add(messageIdentifier);
-                    deliver(id, sequence, messages.get(messageIdentifier));
+                synchronized (delivered) {
+                    if (ackedSet.size() >= majority && !delivered.contains(messageIdentifier)) {
+                        //System.out.println("Majority = "+majority);
+                        delivered.add(messageIdentifier);
+                        synchronized (messages) {
+                            deliver(id, sequence, messages.get(messageIdentifier));
+                        }
+                    }
                 }
 
                 // We ack any message we have not yet acked
