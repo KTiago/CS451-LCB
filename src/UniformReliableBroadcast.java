@@ -56,10 +56,12 @@ public class UniformReliableBroadcast {
     //Start Broadcasting a message
     public void broadcast(String message) {
         Pair<Integer, Integer> messageIdentifier;
-        synchronized(sequenceNumber){
-        messageIdentifier = Pair.of(selfId, sequenceNumber++);
+        synchronized(sequenceNumber) {
+            messageIdentifier = Pair.of(selfId, sequenceNumber++);
+        }
         Set<Integer> ackedSet = new HashSet<>();
         ackedSet.add(selfId);
+        synchronized(nbrAcks){
             nbrAcks.put(messageIdentifier, ackedSet);
         }
         synchronized (message) {
