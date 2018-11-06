@@ -27,11 +27,13 @@ public class Da_proc {
         HashMap<Integer, Pair<String, Integer>> peers = parser.getPeers();
         Da_proc process = new Da_proc(id_process,peers,numberMessages);
         process.start();
+        terminate.await();
     }
 
 
     //Class Variables
     private CountDownLatch wait = new CountDownLatch(1);
+    private static CountDownLatch terminate = new CountDownLatch(1);
     private int numberMessages;
     private volatile boolean isWaiting = true;
     private int id;
@@ -67,8 +69,10 @@ public class Da_proc {
     //Method invoked when the signal SIGTERM or SIGINT is received
     public void stop(){
         wait.countDown();
-        printLogs();
         FIFO.stop();
+        printLogs();
+        terminate.countDown();
+
     }
 
 
@@ -83,26 +87,27 @@ public class Da_proc {
 
     //Callback method for FIFO
     public void deliver(int id, int sequenceNumber, String message){
-        //In this part of the project, there is no real in the message.
+        //In this part of the project, the message is empty
         logs.add(Pair.of(id,sequenceNumber));
     }
 
-    //FIXME SHOULD DELIVER OWN MESSAGES AND BROADCAST THEM IN THE LOG
     //Print the log file in a output file.
     private void printLogs() {
         try {
-            String namefile = "da_proc_"+id+".out";
-            int size = logs.size();
-            FileWriter writer = new FileWriter(namefile);
-            for (int i = 0; i < size;i++) {
-                Pair<Integer, Integer> l = logs.get(i);
-                if(l.first == -1){
-                    writer.write("b " + l.second+"\n");
-                }else {
-                    writer.write("d " +l.first+" "+l.second+"\n");
+            synchronized (logs) {
+                String namefile = "da_proc_" + id + ".out";
+                int size = logs.size();
+                FileWriter writer = new FileWriter(namefile);
+                for (int i = 0; i < size; i++) {
+                    Pair<Integer, Integer> l = logs.get(i);
+                    if (l.first == -1) {
+                        writer.write("b " + l.second + "\n");
+                    } else {
+                        writer.write("d " + l.first + " " + l.second + "\n");
+                    }
                 }
-            }
             writer.close();
+            }
         } catch (Exception e) {
             System.err.format("Exception occurred trying to write output file for process "+id);
             e.printStackTrace();

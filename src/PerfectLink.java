@@ -11,8 +11,9 @@ public class PerfectLink {
     private final int DATAGRAM_LENGTH = 1024;
     private final int INITIAL_TIMEOUT = 100;
     private final int MAXIMUM_TIMEOUT_FACTOR = 100;
+    private final int TIMER_REFRESH_RATE = 10;
 
-    private HashMap<Pair<Integer,Integer>, Pair<DatagramPacket, Long>> timerPackets = new HashMap<>();
+    private HashMap<Pair<Integer, Integer>, Pair<DatagramPacket, Long>> timerPackets;
     private InetAddress sourceIP;
     private int sourcePort;
     private DatagramSocket socket;
@@ -34,38 +35,65 @@ public class PerfectLink {
     private List<List<String>> messagesToSend;
     private List<List<String>> messagesToDeliver;
 
+    /* Perfect link class that ensures perfect link properties.
+       Each message on this layer is uniquely identified with a peer ID (int) and a sequence number (int)
+       ACKS are used to acknowledge messages and timeouts are used to detect losses and trigger retransmissions.
+     */
     public PerfectLink(UniformReliableBroadcast urb, String sourceIP, int sourcePort, HashMap<Integer, Pair<String, Integer>> peers) throws Exception {
+        // uniform reliable broadcast from upper layer (used to deliver messages to)
         this.urb = urb;
+
+        // network parameters
         this.sourceIP = InetAddress.getByName(sourceIP);
         this.sourcePort = sourcePort;
         this.socket = new DatagramSocket(this.sourcePort, this.sourceIP);
 
+        // peers maps a peer ID (int) to the corresponding IP/port pair
         this.peers = resolveAddresses(peers);
         Map<Pair<InetAddress, Integer>, Integer> peersInverse = new HashMap<>();
         for (Map.Entry<Integer, Pair<InetAddress, Integer>> entry : this.peers.entrySet()) {
             peersInverse.put(entry.getValue(), entry.getKey());
         }
+
+        // peersInverse maps and IP/port pair to the corresponding peer ID (int)
         this.peersInverse = peersInverse;
 
+        // two blocking queues for clean multithreading
         this.receiveQueue = new LinkedBlockingQueue<>();
         this.sendQueue = new LinkedBlockingQueue<>();
 
+        // localAcks stores at position i the sequence number corresponding to the next message this local peer wants
+        // to receive from peer i
         this.localAcks = new int[peers.size() + 1];
+
+        // remoteAcks stores at position i the most recent ACK ( = highest sequence number) received from peer i
         this.remoteAcks = new int[peers.size() + 1];
+
+        // sequenceNumbers stores at position i the sequence number of this local peer for messages sent to peer i
+        // where each new message has an incremented sequence number
         this.sequenceNumbers = new int[peers.size() + 1];
         Arrays.fill(sequenceNumbers, -1);
+
+        // timeoutFactors contains a factor per peer by which the timeout is multiplied to throttle useless retransmissions
         this.timeoutFactors = new int[peers.size() + 1];
         Arrays.fill(timeoutFactors, 1);
 
+        // stores all messages to be sends per peer
         this.messagesToSend = new ArrayList<>();
         for (int i = 0; i < peers.size() + 1; i++) {
             this.messagesToSend.add(new ArrayList<>());
         }
+
+        // stores all messages to be delivered per peer
         this.messagesToDeliver = new ArrayList<>();
         for (int i = 0; i < peers.size() + 1; i++) {
             this.messagesToDeliver.add(new ArrayList<>());
         }
 
+        // contains all messages to be retransmitted after a given amount of time
+        this.timerPackets = new HashMap<>();
+        // start 4 different threads
+        // multithreading was not necessary but definitely simplifies the code and may improve performance
         t1 = new Thread() {
             public void run() {
                 receiveLoop();
@@ -104,52 +132,60 @@ public class PerfectLink {
         socket.close();
     }
 
+    // delivers a message to the upper layer
     private void deliver(String message, Integer senderID) {
         urb.plDeliver(message, senderID);
     }
 
+    // send a message to a given peer, method used by the upper layer
     public void send(String message, int destinationID) {
-        //System.out.println("Sending to "+destinationID+" - "+message);
         synchronized (messagesToSend) {
             messagesToSend.get(destinationID).add(message);
         }
+
         InetAddress destinationIP = peers.get(destinationID).first;
         int destinationPort = peers.get(destinationID).second;
         int sequenceNumber = ++sequenceNumbers[destinationID];
         DatagramPacket packet = PacketWrapper.createSimpleMessage(message, sequenceNumber, destinationIP, destinationPort);
+
         sendQueue.add(packet);
 
-
         synchronized (timerPackets) {
-            timerPackets.put(Pair.of(destinationID,sequenceNumber),Pair.of(packet,System.currentTimeMillis()));
+            timerPackets.put(Pair.of(destinationID, sequenceNumber), Pair.of(packet, System.currentTimeMillis()));
         }
     }
 
+    /*
+        This method has a timer for each message sent. When a messages timeouts, it is retransmitted as long
+        as we have not received an acknowledgement for that message or for a more recent message.
 
+        Timeouts times are peer dependent and are incremented for each timeout, allowing to throttle timeouts
+        for inactive peers. As soon as a message is received for a peer, the peers' timeout time is reset to the
+        initial value, as it means that the peer is probably live.
+     */
     private void handleTimer() {
-        try{
+        try {
             while (!Thread.currentThread().isInterrupted()) {
                 synchronized (timerPackets) {
                     long now = System.currentTimeMillis();
-                    List<Pair<Integer,Integer>> toBeRemoved = new ArrayList<>();
-                    List<Pair<Integer,Integer>> toBeRetransmitted= new ArrayList<>();
+                    List<Pair<Integer, Integer>> toBeRemoved = new ArrayList<>();
+                    List<Pair<Integer, Integer>> toBeRetransmitted = new ArrayList<>();
                     for (Pair<Integer, Integer> id_m : timerPackets.keySet()) {
-                        //TODO strictly smaller or not ?!
                         if (remoteAcks[id_m.first] > id_m.second) {
                             toBeRemoved.add(id_m);
                         } else {
                             if (now - timerPackets.get(id_m).second >= INITIAL_TIMEOUT * timeoutFactors[id_m.first]) {
                                 toBeRetransmitted.add(id_m);
-                                if (timeoutFactors[id_m.first] < MAXIMUM_TIMEOUT_FACTOR){
+                                if (timeoutFactors[id_m.first] < MAXIMUM_TIMEOUT_FACTOR) {
                                     timeoutFactors[id_m.first] += 2;
                                 }
                             }
                         }
                     }
-                    for (Pair<Integer, Integer> id_m:toBeRemoved){
+                    for (Pair<Integer, Integer> id_m : toBeRemoved) {
                         timerPackets.remove(id_m);
                     }
-                    for (Pair<Integer,Integer> id_m:toBeRetransmitted){
+                    for (Pair<Integer, Integer> id_m : toBeRetransmitted) {
                         DatagramPacket packet = timerPackets.get(id_m).first;
                         timerPackets.put(id_m, Pair.of(packet, now));
                         sendQueue.add(packet);
@@ -157,14 +193,18 @@ public class PerfectLink {
 
 
                 }
-                Thread.sleep(10);
+                // every 10 ms, we check to see if some packets have timed out
+                Thread.sleep(TIMER_REFRESH_RATE);
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             Thread.currentThread().interrupt();
         }
 
     }
 
+    /*
+        Handles received packets by consuming them from the receiveQueue.
+    */
     private void handler() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
@@ -190,11 +230,9 @@ public class PerfectLink {
                         }
                         // This ack is outdated, nothing needs to be done
                     } else {
-                        // FIXME remove if indeed not needed
                     }
                     // ***** CASE 2 - THE PACKET IS A MESSAGE *****
                 } else {
-                    //System.out.println("Message received, seq = "+sequenceNumber);
                     // this synchronized blocks adds enough elements to the list to fit the received message
                     // at its position corresponding to the sequence numbers.
                     synchronized (messagesToDeliver) {
@@ -219,10 +257,10 @@ public class PerfectLink {
                         }
                     }
                     // The message was not expected, either with higher or lower sequence number.
+                    // nothing special is to be done
                     else {
-                        //FIXME remove if indeed not needed
-                        //nothing special is to be done
                     }
+
                     // For any received message (in sequence or not) an ACK is sent with the next expected message sequence
                     DatagramPacket ackPacket = PacketWrapper.createACK(localAcks[id], packet.getIP(), packet.getPort());
                     sendQueue.add(ackPacket);
@@ -233,6 +271,7 @@ public class PerfectLink {
         }
     }
 
+    // this method runs in a separate thread, it listens to the UDP sockets and add packets to the receiveQueue
     private void receiveLoop() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
@@ -245,6 +284,7 @@ public class PerfectLink {
         }
     }
 
+    // this method runs in a separate thread, it consumes the sendQueue and send packets on the UDP socket
     private void sendLoop() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
@@ -256,6 +296,7 @@ public class PerfectLink {
         }
     }
 
+    // computes the peers map
     private HashMap<Integer, Pair<InetAddress, Integer>> resolveAddresses(HashMap<Integer, Pair<String, Integer>> map) throws Exception {
         HashMap<Integer, Pair<InetAddress, Integer>> peers = new HashMap<>();
         for (Map.Entry<Integer, Pair<String, Integer>> entry : map.entrySet()) {
