@@ -6,6 +6,7 @@ import java.util.List;
 
 public class ParserMembership {
 
+    //Class Variables
     private List<String> input;
     private int nmbPeers;
     private HashMap<Integer, Pair<String,Integer>> peers;
@@ -34,14 +35,16 @@ public class ParserMembership {
     }
 
     //Read a file line by line
-    //https://alvinalexander.com/blog/post/java/how-open-read-file-java-string-array-list
     private List<String> readFile(String filename)
     {
-        List<String> records = new ArrayList<String>();
+        //List that store each lines of the file
+        List<String> records = new ArrayList<>();
         try
         {
+            //Buffer used for reading
             BufferedReader reader = new BufferedReader(new FileReader(filename));
             String line;
+            //While we are not at the end of the file, read the line
             while ((line = reader.readLine()) != null)
             {
                 records.add(line);

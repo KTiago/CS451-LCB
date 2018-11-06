@@ -2,11 +2,14 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
 
-
+//Class useful to manipulate packet and create some
 public class PacketWrapper {
 
+    //Class Variables
     private final int SIZEHEADER = 5;
+    //The byte that represents an ACK is 6
     private static final int ACK = 6;
+    //The byte that represents a normal message is 0
     private static final int notACK = 0;
     private Boolean isACK;
     private int sequenceNumber;
@@ -15,6 +18,7 @@ public class PacketWrapper {
     private DatagramPacket packet;
     private String data;
 
+    //Constructor of PacketWrapper
     public PacketWrapper(DatagramPacket packet) {
         this.packet = packet;
         this.IP = packet.getAddress();
@@ -66,6 +70,8 @@ public class PacketWrapper {
     }
 
 
+    //Static Methods
+
     //Return the Header given a sequence number and isAck
     private static byte[] header(int sequenceNumber, Boolean isACK){
         byte[] seq = Utils.intTo4BytesArray(sequenceNumber);
@@ -91,6 +97,7 @@ public class PacketWrapper {
         //Merge header and content
         byte[] header = header(sequenceNumber,false);
         byte[] msg = message.getBytes(Charset.forName("ISO-8859-1"));
+        //Copy the header and msg in only one array
         int aLen = header.length;
         int bLen = msg.length;
         byte[] content = new byte[aLen+bLen];

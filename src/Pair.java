@@ -1,6 +1,6 @@
 //Java class Pair
+//DISCLAIMER: we did not write that code but instead took it from the link below
 //Source code: http://www.techiedelight.com/implement-pair-class-java/
-
 class Pair<U, V>
 {
     public final U first;   	// first field of a Pair

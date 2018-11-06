@@ -3,9 +3,7 @@ import java.io.FileWriter;
 import java.util.HashMap;
 import java.util.concurrent.CountDownLatch;
 
-//USERNAME:da-user
-//PASSWORD:FIFObroadcast18
-
+//Main class of the project which represents a process
 public class Da_proc {
 
     public static void main(String[] args) throws Exception {
@@ -27,7 +25,6 @@ public class Da_proc {
         //-- Use ParserMembership class to parse the membership table --
         ParserMembership parser = new ParserMembership(membership);
         HashMap<Integer, Pair<String, Integer>> peers = parser.getPeers();
-        //System.out.println("Initializing.\n");
         Da_proc process = new Da_proc(id_process,peers,numberMessages);
         process.start();
     }
@@ -39,29 +36,29 @@ public class Da_proc {
     private volatile boolean isWaiting = true;
     private int id;
     private ArrayList<Pair<Integer,Integer>> logs = new ArrayList<>();
-    private FIFOBroadcast URB;
+    private FIFOBroadcast FIFO;
 
-    //Constructor of da_proc
+    //Constructor of Da_proc
     public Da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) throws Exception{
         this.id = id;
         this.numberMessages = numberMessages;
-        URB = new FIFOBroadcast(membership,id,this);
+        FIFO = new FIFOBroadcast(membership,id,this);
         signalHandling();
     }
-    //Private Methods
 
 
+    //Start the process and wait until the USR2 signal is received, when USR2 is received, it will start broadcast
     public void start() throws Exception{
-        URB.start();//FIXME make sure I can start urb in that order
+        FIFO.start();
         //Waiting to get USR2
         wait.await();
-        //System.out.println("Start broadcasting/receiving");
         for (int i = 0;i < numberMessages;++i){
-            URB.broadcast(" ");
+            FIFO.broadcast(" ");
             logs.add(Pair.of(-1,i + 1));
         }
     }
 
+    //Method invoked when the signal USR2 is received, it unlocks the "wait" CountDownLatch
     public void usr2Signal(){
         wait.countDown();
     }
@@ -69,10 +66,9 @@ public class Da_proc {
 
     //Method invoked when the signal SIGTERM or SIGINT is received
     public void stop(){
-        //System.out.println("Stopping process - "+id);
         wait.countDown();
         printLogs();
-        URB.stop();
+        FIFO.stop();
     }
 
 
@@ -85,9 +81,9 @@ public class Da_proc {
         signalhandler.listenTo("INT");
     }
 
-    //Callback method for URB
+    //Callback method for FIFO
     public void deliver(int id, int sequenceNumber, String message){
-        //TODO Do something with message?
+        //In this part of the project, there is no real in the message.
         logs.add(Pair.of(id,sequenceNumber));
     }
 

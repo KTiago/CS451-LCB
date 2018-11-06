@@ -19,10 +19,12 @@ public class Utils {
         return ret;
     }
 
+    //Return a string of 4 characters corresponding to a 4 bytes int
     public static String intToString(int a){
-        return new String(Arrays.copyOfRange(ByteBuffer.allocate(4).putInt(a).array(), 0, 4),Charset.forName("ISO-8859-1"));
+        return new String(Arrays.copyOfRange(intTo4BytesArray(a), 0, 4),Charset.forName("ISO-8859-1"));
     }
 
+    //Return a 4 bytes Array corresponding to an int
     public static byte[] intTo4BytesArray(int a){
         return ByteBuffer.allocate(4).putInt(a).array();
     }
