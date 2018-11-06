@@ -1,0 +1,21 @@
+--Practical Project: Implementation of Localized Broadcast--
+
+---CS-451 Distributed Algorithm EPFL---
+
+Tiago Kieliger 258981, Benno Schneeberger 258711
+
+
+*First Submission of the project containing:
+	- Perfect Link
+	- Uniform Reliable Broadcast
+	- FIFO Broadcast
+
+*It is implemented in Java and has been tested on the test machine which runs Java 1.8.0_191 on a 64-bit architecture.
+
+*With 5 peers broadcasting 100 messages each and the networks being subject to problems (loss, reordering, delay and crash of peers), 
+ our program is always able to finish within 20 seconds with no mistakes in the logs. We also tested using more peers and messages and
+ the results stays correct as long as the finish time is set according to the number of peers and messages.
+ 
+
+
+
