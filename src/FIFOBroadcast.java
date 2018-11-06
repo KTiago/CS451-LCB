@@ -7,6 +7,9 @@ public class FIFOBroadcast {
     private List<List<String>> messagesToDeliver;
     private int[] nextSequenceToDeliver;
 
+    /*
+        FIFO broadcast that uses a Uniform Reliable Broadcast and orders messages to ensure FIFO properties.
+    */
     public FIFOBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, Da_proc proc) throws Exception {
         this.urb = new UniformReliableBroadcast(peers, selfId, this);
         this.proc = proc;
@@ -26,10 +29,13 @@ public class FIFOBroadcast {
         urb.stop();
     }
 
+    // broadcast method used by the upper layer to broadcast messages
     public void broadcast(String message) {
         urb.broadcast(message);
     }
 
+    // deliver method used by the lower layer (uniform reliable broadcast) to deliver messages
+    // the algorithm store messages that are out of sequence to deliver them when possible.
     public void deliver(int id, int sequenceNumber, String message){
         synchronized (messagesToDeliver) {
             List<String> messages = messagesToDeliver.get(id);

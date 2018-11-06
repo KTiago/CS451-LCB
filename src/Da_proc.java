@@ -30,11 +30,13 @@ public class Da_proc {
         //System.out.println("Initializing.\n");
         Da_proc process = new Da_proc(id_process,peers,numberMessages);
         process.start();
+        terminate.await();
     }
 
 
     //Class Variables
     private CountDownLatch wait = new CountDownLatch(1);
+    private static CountDownLatch terminate = new CountDownLatch(1);
     private int numberMessages;
     private volatile boolean isWaiting = true;
     private int id;
@@ -52,7 +54,7 @@ public class Da_proc {
 
 
     public void start() throws Exception{
-        URB.start();//FIXME make sure I can start urb in that order
+        URB.start();
         //Waiting to get USR2
         wait.await();
         //System.out.println("Start broadcasting/receiving");
@@ -69,10 +71,10 @@ public class Da_proc {
 
     //Method invoked when the signal SIGTERM or SIGINT is received
     public void stop(){
-        //System.out.println("Stopping process - "+id);
         wait.countDown();
-        printLogs();
         URB.stop();
+        printLogs();
+        terminate.countDown();
     }
 
 
@@ -87,26 +89,26 @@ public class Da_proc {
 
     //Callback method for URB
     public void deliver(int id, int sequenceNumber, String message){
-        //TODO Do something with message?
         logs.add(Pair.of(id,sequenceNumber));
     }
 
-    //FIXME SHOULD DELIVER OWN MESSAGES AND BROADCAST THEM IN THE LOG
     //Print the log file in a output file.
     private void printLogs() {
         try {
-            String namefile = "da_proc_"+id+".out";
-            int size = logs.size();
-            FileWriter writer = new FileWriter(namefile);
-            for (int i = 0; i < size;i++) {
-                Pair<Integer, Integer> l = logs.get(i);
-                if(l.first == -1){
-                    writer.write("b " + l.second+"\n");
-                }else {
-                    writer.write("d " +l.first+" "+l.second+"\n");
+            synchronized (logs) {
+                String namefile = "da_proc_" + id + ".out";
+                int size = logs.size();
+                FileWriter writer = new FileWriter(namefile);
+                for (int i = 0; i < size; i++) {
+                    Pair<Integer, Integer> l = logs.get(i);
+                    if (l.first == -1) {
+                        writer.write("b " + l.second + "\n");
+                    } else {
+                        writer.write("d " + l.first + " " + l.second + "\n");
+                    }
                 }
-            }
             writer.close();
+            }
         } catch (Exception e) {
             System.err.format("Exception occurred trying to write output file for process "+id);
             e.printStackTrace();
