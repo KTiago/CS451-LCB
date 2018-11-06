@@ -39,13 +39,13 @@ public class Da_proc {
     private volatile boolean isWaiting = true;
     private int id;
     private ArrayList<Pair<Integer,Integer>> logs = new ArrayList<>();
-    private UniformReliableBroadcast URB;
+    private FIFOBroadcast URB;
 
     //Constructor of da_proc
     public Da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) throws Exception{
         this.id = id;
         this.numberMessages = numberMessages;
-        URB = new UniformReliableBroadcast(membership,id,this);
+        URB = new FIFOBroadcast(membership,id,this);
         signalHandling();
     }
     //Private Methods
