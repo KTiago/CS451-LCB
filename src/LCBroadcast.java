@@ -9,6 +9,7 @@ public class LCBroadcast {
     private List<Integer> dependencies;
     private int lsn;
     private int selfId;
+    private int nbrPeers;
 
     /*
         FIFO broadcast that uses a Uniform Reliable Broadcast and orders messages to ensure FIFO properties.
@@ -19,8 +20,9 @@ public class LCBroadcast {
         this.selfId = selfId;
         this.lsn = 1;
         this.proc = proc;
+        this.nbrPeers = peers.size();
         this.pending = new HashMap<>();
-        this.vectorClock = new int[peers.size() + 1];
+        this.vectorClock = new int[nbrPeers + 1];
         Arrays.fill(vectorClock, 1);
     }
 
@@ -41,16 +43,8 @@ public class LCBroadcast {
                 vectorClockCopy[i] = 1;
             }
             lsn += 1;
-            urb.broadcast(vcToString(vectorClockCopy) + message);
+            urb.broadcast(Utils.VCToString(vectorClockCopy) + message);
         }
-    }
-
-    private int[] getVectorClock(String message) {
-        return null;
-    }
-
-    private String vcToString(int[] vectorClock) {
-        return null;
     }
 
     private boolean isSmaller(int[] vc1, int[] vc2){
@@ -64,17 +58,19 @@ public class LCBroadcast {
 
     // deliver method used by the lower layer (uniform reliable broadcast) to deliver messages
     // the algorithm store messages that are out of sequence to deliver them when possible.
-    public void deliver(int id, int sequenceNumber, String message) {
+    public void deliver(int id, int sequenceNumber, String payload) {
         synchronized (this) {
-            int[] receivedVectorClock = getVectorClock(message);
+            int[] receivedVectorClock = Utils.stringToVC(payload, nbrPeers);
+            String message = Utils.getMessageVC(payload, nbrPeers);
             pending.putIfAbsent(Pair.of(id, sequenceNumber), Pair.of(receivedVectorClock, message));
             Iterator<Pair<Integer, Integer>> iterator = pending.keySet().iterator();
             while (iterator.hasNext()) {
                 Pair<Integer, Integer> pair = iterator.next();
-                if (isSmaller(pending.get(pair).first, vectorClock))
-                    iterator.remove();
+                if (isSmaller(pending.get(pair).first, vectorClock)) {
                     vectorClock[pair.first] += 1;
                     proc.deliver(pair.first, pair.second, pending.get(pair).second);
+                    iterator.remove();
+                }
             }
         }
     }

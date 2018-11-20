@@ -39,7 +39,7 @@ public class Utils {
 
 
     //Return the Vector clock corresponding to a string
-    public static  int[] StringToVC(String msg,int nbrPeers){
+    public static  int[] stringToVC(String msg, int nbrPeers){
         String strVC = msg.substring(0,nbrPeers*4);
         int [] VC = new int[nbrPeers];
         byte[] byteMsg = msg.getBytes(Charset.forName("ISO-8859-1"));
