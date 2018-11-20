@@ -10,13 +10,19 @@ public class ParserMembership {
     private List<String> input;
     private int nmbPeers;
     private HashMap<Integer, Pair<String,Integer>> peers;
-
+    private List<Integer> dependencies = new ArrayList<>();
 
     //Init and parse all membership file
-    public ParserMembership(String filename) {
+    public ParserMembership(String filename,int id) {
         input = readFile(filename);
         nmbPeers = Integer.parseInt(input.get(0));
         peers = parsePeers();
+        dependencies = parseDependencies(id);
+    }
+
+    //Getter for the peers table
+    public List<Integer> getDependencies() {
+        return dependencies;
     }
 
     //Getter for the peers table
@@ -28,10 +34,19 @@ public class ParserMembership {
     private HashMap<Integer, Pair<String, Integer>> parsePeers() {
         HashMap<Integer, Pair<String, Integer>> peersTable = new HashMap<>();
         for(int i = 1;i <= nmbPeers;++i){
-            String[] splited = input.get(i).split("\\s+");
-            peersTable.put(Integer.parseInt(splited[0]),Pair.of(splited[1],Integer.parseInt(splited[2])));
+            String[] split = input.get(i).split("\\s+");
+            peersTable.put(Integer.parseInt(split[0]),Pair.of(split[1],Integer.parseInt(split[2])));
         }
         return peersTable;
+    }
+
+    private List<Integer> parseDependencies(int id){
+        List<Integer> dep = new ArrayList<>();
+        String[] split = input.get(nmbPeers+id).split("\\s+");
+        for (int i = 1;i<split.length;i++){
+            dep.add(Integer.parseInt(split[i]));
+        }
+        return dep;
     }
 
     //Read a file line by line

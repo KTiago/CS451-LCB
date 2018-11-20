@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.io.FileWriter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 //Main class of the project which represents a process
@@ -23,8 +24,9 @@ public class Da_proc {
         }
 
         //-- Use ParserMembership class to parse the membership table --
-        ParserMembership parser = new ParserMembership(membership);
+        ParserMembership parser = new ParserMembership(membership,id_process);
         HashMap<Integer, Pair<String, Integer>> peers = parser.getPeers();
+        List<Integer> dependencies = parser.getDependencies();
         Da_proc process = new Da_proc(id_process,peers,numberMessages);
         process.start();
         terminate.await();
