@@ -10,7 +10,7 @@ public class UniformReliableBroadcast {
     private Set<Integer> peers;
     private int majority;
     private PerfectLink perfectLink;
-    private FIFOBroadcast FIFO;
+    private LCBroadcast FIFO; //FIXME Use interface of sth of the sort so as to have either FIFO or Localized
 
     // Maps the message identifier to the number of ack received for that message
     // a message is uniquely identified by a pair (peerID, sequenceNumber)
@@ -33,7 +33,7 @@ public class UniformReliableBroadcast {
         Uniform reliable broadcast built on top of a perfect link. It deliver messages only after
         a majority of peers have ACKed a given message to ensure URB properties.
      */
-    public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, FIFOBroadcast FIFO) throws Exception {
+    public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, LCBroadcast FIFO) throws Exception {
         this.peers = peers.keySet();
         this.perfectLink = new PerfectLink(this, peers.get(selfId).first, peers.get(selfId).second, peers);
         this.majority = peers.size() / 2 + 1;
