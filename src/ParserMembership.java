@@ -10,7 +10,7 @@ public class ParserMembership {
     private List<String> input;
     private int nmbPeers;
     private HashMap<Integer, Pair<String,Integer>> peers;
-    private List<Integer> dependencies = new ArrayList<>();
+    private List<Integer> dependencies;
 
     //Init and parse all membership file
     public ParserMembership(String filename,int id) {

@@ -27,7 +27,7 @@ public class Da_proc {
         ParserMembership parser = new ParserMembership(membership,id_process);
         HashMap<Integer, Pair<String, Integer>> peers = parser.getPeers();
         List<Integer> dependencies = parser.getDependencies();
-        Da_proc process = new Da_proc(id_process,peers,numberMessages);
+        Da_proc process = new Da_proc(id_process,peers,numberMessages, dependencies);
         process.start();
         terminate.await();
     }
@@ -43,10 +43,10 @@ public class Da_proc {
     private LCBroadcast LCB;
 
     //Constructor of Da_proc
-    public Da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages) throws Exception{
+    public Da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages, List<Integer> dependencies) throws Exception{
         this.id = id;
         this.numberMessages = numberMessages;
-        LCB = new LCBroadcast(membership, null, id,this);
+        LCB = new LCBroadcast(membership, dependencies, id,this);
         signalHandling();
     }
 
