@@ -5,12 +5,12 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class UniformReliableBroadcast {
+public class UniformReliableBroadcast extends Broadcast {
 
     private Set<Integer> peers;
     private int majority;
     private PerfectLink perfectLink;
-    private LCBroadcast FIFO; //FIXME Use interface of sth of the sort so as to have either FIFO or Localized
+    private Broadcast BC;
 
     // Maps the message identifier to the number of ack received for that message
     // a message is uniquely identified by a pair (peerID, sequenceNumber)
@@ -33,12 +33,12 @@ public class UniformReliableBroadcast {
         Uniform reliable broadcast built on top of a perfect link. It deliver messages only after
         a majority of peers have ACKed a given message to ensure URB properties.
      */
-    public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, LCBroadcast FIFO) throws Exception {
+    public UniformReliableBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, Broadcast BC) throws Exception {
         this.peers = peers.keySet();
         this.perfectLink = new PerfectLink(this, peers.get(selfId).first, peers.get(selfId).second, peers);
         this.majority = peers.size() / 2 + 1;
         this.selfId = selfId;
-        this.FIFO = FIFO;
+        this.BC = BC;
         this.t1 = new Thread() {
             public void run() {
                     handler();
@@ -168,7 +168,7 @@ public class UniformReliableBroadcast {
 
     // Deliver methode that calls deliver of the upper layer
     public void deliver(int id, int sequenceNumber, String message) {
-        FIFO.deliver(id, sequenceNumber, message);
+        BC.deliver(id, sequenceNumber, message);
         if (debug) System.out.println("deliver " + id + " " + sequenceNumber);
     }
 }

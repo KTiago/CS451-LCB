@@ -1,8 +1,8 @@
 import java.util.*;
 
-public class LCBroadcast {
+public class LCBroadcast extends Broadcast{
 
-    private final UniformReliableBroadcast urb;
+    private final Broadcast urb;
     private final Da_proc proc;
     private HashMap<Pair<Integer, Integer>, Pair<int[], String>> pending;
     private int[] vectorClock;
@@ -12,9 +12,15 @@ public class LCBroadcast {
     private int nbrPeers;
 
     /*
-        FIFO broadcast that uses a Uniform Reliable Broadcast and orders messages to ensure FIFO properties.
+        Localized causal broadcast that uses a Uniform Reliable Broadcast and uses a vector clock to ensure localized causal properties.
+
+        The difference with the regular causal broadcast algorithm as described in the book
+        "Introduction to reliable and secure distributed programming" is that when a peer pi sends its vector
+        clock to another peer, it sets to 0 all the entries of the vector clock corresponding to peers pj s.t.
+        pi does not depend on pj.
     */
     public LCBroadcast(HashMap<Integer, Pair<String, Integer>> peers, List<Integer> dependencies, int selfId, Da_proc proc) throws Exception {
+        // we use an instance of Uniform Reliable Broadcast
         this.urb = new UniformReliableBroadcast(peers, selfId, this);
         this.dependencies = dependencies;
         this.selfId = selfId;
@@ -47,6 +53,7 @@ public class LCBroadcast {
         }
     }
 
+    // checks if the vectors clock vc1 is smaller or equal to vc2
     private boolean isSmaller(int[] vc1, int[] vc2){
         for(int i = 0; i < vc1.length; i++){
             if(vc1[i] > vc2[i]){
@@ -57,7 +64,6 @@ public class LCBroadcast {
     }
 
     // deliver method used by the lower layer (uniform reliable broadcast) to deliver messages
-    // the algorithm store messages that are out of sequence to deliver them when possible.
     public void deliver(int id, int sequenceNumber, String payload) {
         synchronized (this) {
             int[] receivedVectorClock = Utils.stringToVC(payload, nbrPeers);
