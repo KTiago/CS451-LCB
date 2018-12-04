@@ -31,7 +31,6 @@ public class Test {
                 }
             }
         }
-
         //Check step
         for(int p = 0; p < numberOfPeers; p++) {
             List<List<Integer>> out = output.get(p);
@@ -39,7 +38,15 @@ public class Test {
             for(List<Integer>line:out){
                 if(line.get(0) == d){
                     Pair<Integer,Integer> pair = Pair.of(line.get(1),line.get(2));
-                    assert delivered.containsAll(dep.get(pair));
+                    if(!delivered.containsAll(dep.get(pair))){
+                        System.out.println("Peer "+(p+1));
+                        System.out.println("Error");
+                        System.out.println(pair);
+                        System.out.println("Should have been delivered :");
+                        System.out.println(dep.get(pair));
+                        System.out.println("What has been delivered :");
+                        System.out.println(delivered);
+                    }
                     delivered.add(pair);
                 }
             }

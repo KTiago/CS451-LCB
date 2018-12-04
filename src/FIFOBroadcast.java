@@ -11,7 +11,7 @@ public class FIFOBroadcast extends Broadcast{
         FIFO broadcast that uses a Uniform Reliable Broadcast and orders messages to ensure FIFO properties.
     */
     public FIFOBroadcast(HashMap<Integer, Pair<String, Integer>> peers, int selfId, Da_proc proc) throws Exception {
-        this.urb = new UniformReliableBroadcast(peers, selfId, null);//FIXME
+        this.urb = new UniformReliableBroadcast(peers, selfId, this);
         this.proc = proc;
         this.messagesToDeliver = new ArrayList<>();
         for (int i = 0; i < peers.size() + 1; i++) {
