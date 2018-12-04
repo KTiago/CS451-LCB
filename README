@@ -5,10 +5,11 @@
 Tiago Kieliger 258981, Benno Schneeberger 258711
 
 
-*First Submission of the project containing:
+*Second Submission of the project containing:
 	- Perfect Link
 	- Uniform Reliable Broadcast
 	- FIFO Broadcast
+        - Localized causal broadcast
 
 *It is implemented in Java and has been tested on the test machine which runs Java 1.8.0_191 on a 64-bit architecture.
 
@@ -16,7 +17,7 @@ Tiago Kieliger 258981, Benno Schneeberger 258711
  our program is always able to finish within 20 seconds with no mistakes in the logs. We also tested using more peers and messages and
  the results stays correct as long as the finish time is set according to the number of peers and messages.
 
-*How we implements Perfect Link, URB and FIFO boradcast is explained in more details in their respective class.
+*How we implements Perfect Link, URB broadcast, FIFO broadcast and Localized causal broadcast is explained in more details in their respective class.
  
 
 

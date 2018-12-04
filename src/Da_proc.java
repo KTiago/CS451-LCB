@@ -37,27 +37,27 @@ public class Da_proc {
     private CountDownLatch wait = new CountDownLatch(1);
     private static CountDownLatch terminate = new CountDownLatch(1);
     private int numberMessages;
-    private volatile boolean isWaiting = true;
     private int id;
     private ArrayList<Pair<Integer,Integer>> logs = new ArrayList<>();
-    private LCBroadcast LCB;
+    private Broadcast BC;
 
     //Constructor of Da_proc
     public Da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages, List<Integer> dependencies) throws Exception{
         this.id = id;
         this.numberMessages = numberMessages;
-        LCB = new LCBroadcast(membership, dependencies, id,this);
+        // We instantiate a Localized Causal Broadcast
+        BC = new LCBroadcast(membership, dependencies, id,this);
         signalHandling();
     }
 
 
     //Start the process and wait until the USR2 signal is received, when USR2 is received, it will start broadcast
     public void start() throws Exception{
-        LCB.start();
+        BC.start();
         //Waiting to get USR2
         wait.await();
         for (int i = 0;i < numberMessages;++i){
-            LCB.broadcast(" ");
+            BC.broadcast(" ");
             logs.add(Pair.of(-1,i + 1));
         }
     }
@@ -71,13 +71,11 @@ public class Da_proc {
     //Method invoked when the signal SIGTERM or SIGINT is received
     public void stop(){
         wait.countDown();
-        LCB.stop();
+        BC.stop();
         printLogs();
         terminate.countDown();
 
     }
-
-
 
     //Handling TERM, INT and USR2 signals
     public void signalHandling(){

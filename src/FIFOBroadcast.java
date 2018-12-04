@@ -1,6 +1,6 @@
 import java.util.*;
 
-public class FIFOBroadcast {
+public class FIFOBroadcast extends Broadcast{
 
     private final UniformReliableBroadcast urb;
     private final Da_proc proc;
