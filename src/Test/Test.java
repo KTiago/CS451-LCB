@@ -38,7 +38,7 @@ public class Test {
             for(List<Integer>line:out){
                 if(line.get(0) == d){
                     Pair<Integer,Integer> pair = Pair.of(line.get(1),line.get(2));
-                    if(!delivered.containsAll(dep.get(pair))){
+                    if(dep.get(pair) != null && !delivered.containsAll(dep.get(pair))){
                         System.out.println("Peer "+(p+1));
                         System.out.println("Error");
                         System.out.println(pair);

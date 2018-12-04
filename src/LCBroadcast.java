@@ -7,6 +7,7 @@ public class LCBroadcast extends Broadcast{
     private HashMap<Pair<Integer, Integer>, Pair<int[], String>> pending;
     private int[] vectorClock;
     private List<Integer> dependencies;
+    private Set<Integer> nonDependencies;
     private int lsn;
     private int selfId;
     private int nbrPeers;
@@ -27,6 +28,13 @@ public class LCBroadcast extends Broadcast{
         this.lsn = 1;
         this.proc = proc;
         this.nbrPeers = peers.size();
+
+        this.nonDependencies = new HashSet<>();
+        for(int i = 1; i < nbrPeers; i++) {
+            if(!dependencies.contains(i)){
+                nonDependencies.add(i);
+            }
+        }
         this.pending = new HashMap<>();
         this.vectorClock = new int[nbrPeers + 1];
         Arrays.fill(vectorClock, 1);
@@ -44,10 +52,10 @@ public class LCBroadcast extends Broadcast{
     public void broadcast(String message) {
         synchronized (this) {
             int[] vectorClockCopy = vectorClock.clone();
-            vectorClockCopy[selfId] = lsn;
-            for (int i : dependencies) {
+            for (int i : nonDependencies) {
                 vectorClockCopy[i] = 1;
             }
+            vectorClockCopy[selfId] = lsn;
             lsn += 1;
             urb.broadcast(Utils.VCToString(vectorClockCopy) + message);
         }
@@ -66,13 +74,21 @@ public class LCBroadcast extends Broadcast{
     // deliver method used by the lower layer (uniform reliable broadcast) to deliver messages
     public void deliver(int id, int sequenceNumber, String payload) {
         synchronized (this) {
-            int[] receivedVectorClock = Utils.stringToVC(payload, nbrPeers);
-            String message = Utils.getMessageVC(payload, nbrPeers);
-            pending.putIfAbsent(Pair.of(id, sequenceNumber), Pair.of(receivedVectorClock, message));
+            int[] receivedVectorClock = Utils.stringToVC(payload, nbrPeers + 1);
+            String message = Utils.getMessageVC(payload, nbrPeers + 1);
+            pending.put(Pair.of(id, sequenceNumber), Pair.of(receivedVectorClock, message));
             Iterator<Pair<Integer, Integer>> iterator = pending.keySet().iterator();
             while (iterator.hasNext()) {
                 Pair<Integer, Integer> pair = iterator.next();
                 if (isSmaller(pending.get(pair).first, vectorClock)) {
+                    /*
+                    System.out.println("***");
+                    System.out.println(selfId);
+                    System.out.println(pair);
+                    System.out.println(Arrays.toString(pending.get(pair).first));
+                    System.out.println(Arrays.toString(vectorClock));
+                    System.out.println("***");
+                    */
                     vectorClock[pair.first] += 1;
                     proc.deliver(pair.first, pair.second, pending.get(pair).second);
                     iterator.remove();
