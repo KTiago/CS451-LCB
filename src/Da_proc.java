@@ -37,13 +37,17 @@ public class Da_proc {
     private CountDownLatch wait = new CountDownLatch(1);
     private static CountDownLatch terminate = new CountDownLatch(1);
     private int numberMessages;
-    private int id;
+    private int selfId;
     private ArrayList<Pair<Integer,Integer>> logs = new ArrayList<>();
     private Broadcast BC;
+    private int countBroadcasted = 0;
+    private int countSelfDelivered = 0;
+    private final int BATCH_SIZE = 1000;
+    private boolean stopped = false;
 
     //Constructor of Da_proc
     public Da_proc(int id,HashMap<Integer, Pair<String,Integer>> membership, int numberMessages, List<Integer> dependencies) throws Exception{
-        this.id = id;
+        this.selfId = id;
         this.numberMessages = numberMessages;
         // We instantiate a Localized Causal Broadcast
         BC = new LCBroadcast(membership, dependencies, id,this);
@@ -56,12 +60,10 @@ public class Da_proc {
         BC.start();
         //Waiting to get USR2
         wait.await();
-        for (int i = 0;i < numberMessages;++i){
+        for (int i = 0; i < BATCH_SIZE && countBroadcasted < numberMessages; ++i){
             BC.broadcast(" ");
             logs.add(Pair.of(-1,i + 1));
-            if(i%5 == 0){
-                Thread.sleep(1000);
-            }
+            countBroadcasted++;
         }
     }
 
@@ -73,6 +75,7 @@ public class Da_proc {
 
     //Method invoked when the signal SIGTERM or SIGINT is received
     public void stop(){
+        stopped = true;
         wait.countDown();
         BC.stop();
         printLogs();
@@ -92,13 +95,21 @@ public class Da_proc {
     public void deliver(int id, int sequenceNumber, String message){
         //In this part of the project, the message is empty
         logs.add(Pair.of(id,sequenceNumber));
+        if((this.selfId == id) && (++countSelfDelivered == countBroadcasted) && (!stopped)){
+            int maximum = countBroadcasted + BATCH_SIZE;
+            for (int i = countBroadcasted; i < maximum && countBroadcasted < numberMessages; ++i){
+                BC.broadcast(" ");
+                logs.add(Pair.of(-1,i + 1));
+                countBroadcasted++;
+            }
+        }
     }
 
     //Print the log file in a output file.
     private void printLogs() {
         try {
             synchronized (logs) {
-                String namefile = "da_proc_" + id + ".out";
+                String namefile = "da_proc_" + selfId + ".out";
                 int size = logs.size();
                 FileWriter writer = new FileWriter(namefile);
                 for (int i = 0; i < size; i++) {
@@ -112,7 +123,7 @@ public class Da_proc {
             writer.close();
             }
         } catch (Exception e) {
-            System.err.format("Exception occurred trying to write output file for process "+id);
+            System.err.format("Exception occurred trying to write output file for process "+ selfId);
             e.printStackTrace();
         }
     }
