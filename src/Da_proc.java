@@ -59,6 +59,9 @@ public class Da_proc {
         for (int i = 0;i < numberMessages;++i){
             BC.broadcast(" ");
             logs.add(Pair.of(-1,i + 1));
+            if(i%5 == 0){
+                Thread.sleep(1000);
+            }
         }
     }
 

@@ -7,12 +7,13 @@ public class LCBroadcast extends Broadcast{
     private HashMap<Pair<Integer, Integer>, Pair<int[], String>> pending;
     private int[] vectorClock;
     private List<Integer> dependencies;
+    private Set<Integer> nonDependencies;
     private int lsn;
     private int selfId;
     private int nbrPeers;
 
     /*
-        Localized causal broadcast that uses a Uniform Reliable Broadcast and uses a vector clock to ensure localized causal properties.
+        Localized causal broadcast that uses a Uniform Reliable Broadcast and a vector clock to ensure localized causal properties.
 
         The difference with the regular causal broadcast algorithm as described in the book
         "Introduction to reliable and secure distributed programming" is that when a peer pi sends its vector
@@ -27,6 +28,13 @@ public class LCBroadcast extends Broadcast{
         this.lsn = 1;
         this.proc = proc;
         this.nbrPeers = peers.size();
+
+        this.nonDependencies = new HashSet<>();
+        for(int i = 1; i < nbrPeers; i++) {
+            if(!dependencies.contains(i)){
+                nonDependencies.add(i);
+            }
+        }
         this.pending = new HashMap<>();
         this.vectorClock = new int[nbrPeers + 1];
         Arrays.fill(vectorClock, 1);
@@ -44,16 +52,16 @@ public class LCBroadcast extends Broadcast{
     public void broadcast(String message) {
         synchronized (this) {
             int[] vectorClockCopy = vectorClock.clone();
-            vectorClockCopy[selfId] = lsn;
-            for (int i : dependencies) {
+            for (int i : nonDependencies) {
                 vectorClockCopy[i] = 1;
             }
+            vectorClockCopy[selfId] = lsn;
             lsn += 1;
             urb.broadcast(Utils.VCToString(vectorClockCopy) + message);
         }
     }
 
-    // checks if the vectors clock vc1 is smaller or equal to vc2
+    // checks if the vector clock vc1 is smaller or equal to vc2
     private boolean isSmaller(int[] vc1, int[] vc2){
         for(int i = 0; i < vc1.length; i++){
             if(vc1[i] > vc2[i]){
@@ -66,9 +74,9 @@ public class LCBroadcast extends Broadcast{
     // deliver method used by the lower layer (uniform reliable broadcast) to deliver messages
     public void deliver(int id, int sequenceNumber, String payload) {
         synchronized (this) {
-            int[] receivedVectorClock = Utils.stringToVC(payload, nbrPeers);
-            String message = Utils.getMessageVC(payload, nbrPeers);
-            pending.putIfAbsent(Pair.of(id, sequenceNumber), Pair.of(receivedVectorClock, message));
+            int[] receivedVectorClock = Utils.stringToVC(payload, nbrPeers + 1);
+            String message = Utils.getMessageVC(payload, nbrPeers + 1);
+            pending.put(Pair.of(id, sequenceNumber), Pair.of(receivedVectorClock, message));
             Iterator<Pair<Integer, Integer>> iterator = pending.keySet().iterator();
             while (iterator.hasNext()) {
                 Pair<Integer, Integer> pair = iterator.next();

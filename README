@@ -10,14 +10,34 @@ Tiago Kieliger 258981, Benno Schneeberger 258711
 	- Uniform Reliable Broadcast
 	- FIFO Broadcast
         - Localized causal broadcast
+        - Correctness test for the localized causal broadcast
+        - Throughput test for the localized causal broadcast
+
+*Directory structure:
+
+└── 23                       # Main directory
+    ├── Da_proc.java               # Main class to be called from command line
+    ├── Broadcast.java             # Abstract broadcast class
+    ├── FIFOBroadcast.java         # FIFO broadcast class
+    ├── LCBroadcast.java           # Localized causal broadcast class
+    ├── PerfectLink.java           # Perfect link class
+    ├── PacketWrapper.java         # Helper class to form datagram packets
+    ├── ParserMembership.java      # Helper class to parse the membership file
+    ├── Pair.java                  # Helper class to form pair of objects
+    ├── makefile                   # makefile to build the project
+    ├── README                     
+    └── Test                 # Directory containing files to test the correctness
+         |                   # of the localized causal broadcast logs. Works in standalone.
+         ├── Test.java             # Test class for the correctness of the localized causal broadcast
+         ├── parser.java           # Helper class to parse the logs
+         ├── ParserMembership.java # Helper class to parse the membership file (copy)
+         └── Pair.java             # Helper class to form pair objects (copy)
+
+*We have implemented a two pass algorithm to check the logs of the localized causal broadcast for correctness.
 
 *It is implemented in Java and has been tested on the test machine which runs Java 1.8.0_191 on a 64-bit architecture.
 
-*With 5 peers broadcasting 100 messages each and the networks being subject to problems (loss, reordering, delay and crash of peers), 
- our program is always able to finish within 20 seconds with no mistakes in the logs. We also tested using more peers and messages and
- the results stays correct as long as the finish time is set according to the number of peers and messages.
-
-*How we implements Perfect Link, URB broadcast, FIFO broadcast and Localized causal broadcast is explained in more details in their respective class.
+*How we've implemented Perfect Link, URB broadcast, FIFO broadcast and Localized causal broadcast is explained in more details in their respective class.
  
 
 
