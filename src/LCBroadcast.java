@@ -13,7 +13,7 @@ public class LCBroadcast extends Broadcast{
     private int nbrPeers;
 
     /*
-        Localized causal broadcast that uses a Uniform Reliable Broadcast and uses a vector clock to ensure localized causal properties.
+        Localized causal broadcast that uses a Uniform Reliable Broadcast and a vector clock to ensure localized causal properties.
 
         The difference with the regular causal broadcast algorithm as described in the book
         "Introduction to reliable and secure distributed programming" is that when a peer pi sends its vector
@@ -61,7 +61,7 @@ public class LCBroadcast extends Broadcast{
         }
     }
 
-    // checks if the vectors clock vc1 is smaller or equal to vc2
+    // checks if the vector clock vc1 is smaller or equal to vc2
     private boolean isSmaller(int[] vc1, int[] vc2){
         for(int i = 0; i < vc1.length; i++){
             if(vc1[i] > vc2[i]){
@@ -81,14 +81,6 @@ public class LCBroadcast extends Broadcast{
             while (iterator.hasNext()) {
                 Pair<Integer, Integer> pair = iterator.next();
                 if (isSmaller(pending.get(pair).first, vectorClock)) {
-                    /*
-                    System.out.println("***");
-                    System.out.println(selfId);
-                    System.out.println(pair);
-                    System.out.println(Arrays.toString(pending.get(pair).first));
-                    System.out.println(Arrays.toString(vectorClock));
-                    System.out.println("***");
-                    */
                     vectorClock[pair.first] += 1;
                     proc.deliver(pair.first, pair.second, pending.get(pair).second);
                     iterator.remove();
