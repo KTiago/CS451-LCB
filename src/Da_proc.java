@@ -42,7 +42,7 @@ public class Da_proc {
     private Broadcast BC;
     private int countBroadcasted = 0;
     private int countSelfDelivered = 0;
-    private final int BATCH_SIZE = 1000;
+    private final int BATCH_SIZE = 5000;
     private boolean stopped = false;
 
     //Constructor of Da_proc

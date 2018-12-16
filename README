@@ -25,13 +25,9 @@ Tiago Kieliger 258981, Benno Schneeberger 258711
     ├── ParserMembership.java      # Helper class to parse the membership file
     ├── Pair.java                  # Helper class to form pair of objects
     ├── makefile                   # makefile to build the project
-    ├── README                     
-    └── Test                 # Directory containing files to test the correctness
-         |                   # of the localized causal broadcast logs. Works in standalone.
-         ├── Test.java             # Test class for the correctness of the localized causal broadcast
-         ├── parser.java           # Helper class to parse the logs
-         ├── ParserMembership.java # Helper class to parse the membership file (copy)
-         └── Pair.java             # Helper class to form pair objects (copy)
+    ├── README                                    
+    ├── Test.java                  # Test class for the correctness of the localized causal broadcast
+    └── parser.java                # Helper class to parse the logs used for the correctness test
 
 *We have implemented a two pass algorithm to check the logs of the localized causal broadcast for correctness.
 
